@@ -3,12 +3,11 @@
 #include <replxx.hxx>
 #include <sstream>
 
+using namespace task_manager;
 using namespace replxx;
-using namespace op;
 
-namespace name = ;
 int main() {
-  Core core;
+  Calendar calendar;
   Replxx rx;
 
   rx.history_load("history.txt"); // save/restore history
@@ -32,12 +31,12 @@ int main() {
       std::getline(iss, title);
       if (!title.empty() && title[0] == ' ')
         title.erase(0, 1);
-      auto id = core.create_task(title);
-      std::cout << "Created task " << id << ": " << title << "\n";
-    } else if (cmd == "list_tasks") {
-      for (auto &t : core.list_tasks()) {
-        std::cout << t.id << ": " << t.title << "\n";
-      }
+      // auto id = core.create_task(title);
+      std::cout << "Created task " << ": " << title << "\n";
+      // } else if (cmd == "list_event") {
+      //   for (auto &t : calendar.list_events()) {
+      //     std::cout << t.id << ": " << t.title << "\n";
+      //   }
     } else {
       std::cout << "Unknown command\n";
     }

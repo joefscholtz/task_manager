@@ -8,15 +8,16 @@ int Calendar::tick() {
 }
 
 bool Calendar::update_events() {
-  for (auto &event : self._ongoing_events) {
-    if (event._end < now) {
-      self._past_events.emplace_back(std::move(event));
+  for (auto &event : this->_ongoing_events) {
+    if (event.get_end() < now) {
+      this->_past_events.emplace_back(std::move(event));
       continue;
     }
-    if (event._end > now) {
-      self._future_events.emplace_back(std::move(event));
+    if (event.get_end() > now) {
+      this->_future_events.emplace_back(std::move(event));
       continue;
     }
   }
+  return true;
 }
 } // namespace task_manager

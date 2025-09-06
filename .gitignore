@@ -1,0 +1,4 @@
+**/build/
+**.log
+3rd_party/
+**history*

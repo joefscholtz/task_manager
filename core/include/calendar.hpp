@@ -5,8 +5,8 @@
 namespace task_manager {
 class Calendar {
 public:
-  Calendar();
-  ~Calendar();
+  Calendar() {}
+  ~Calendar() = default;
   int tick();
   bool update_events();
 
