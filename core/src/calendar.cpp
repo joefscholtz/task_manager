@@ -151,9 +151,48 @@ bool Calendar::create_event(Event &event, const time_point &time_p) {
   return true;
 }
 
-bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {}
+bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
+  try {
+    _storage.transaction([&]() {
+      _storage.update(*event_ptr);
+      return true;
+    });
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error updating event: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cerr << "Unknown error updating event" << std::endl;
+    return false;
+  }
+}
 
-bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {}
+bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {
+  try {
+    _storage.transaction([&]() {
+      _storage.remove(*event_ptr);
+      return true;
+    });
+
+    // Remove from all internal vectors to keep calendar consistent
+    auto remove_from_vector = [&](auto &vec) {
+      vec.erase(std::remove(vec.begin(), vec.end(), event_ptr), vec.end());
+    };
+
+    remove_from_vector(this->_all_events);
+    remove_from_vector(this->_past_events);
+    remove_from_vector(this->_ongoing_events);
+    remove_from_vector(this->_future_events);
+
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error removing event: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cerr << "Unknown error removing event" << std::endl;
+    return false;
+  }
+}
 
 std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
   for (size_t i = 0; i < calendar._all_events.size(); ++i) {
