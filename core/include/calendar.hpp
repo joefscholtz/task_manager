@@ -28,6 +28,7 @@ public:
   bool
   create_event(Event &event,
                const time_point &time_p = std::chrono::system_clock::now());
+  bool remove_event_by_id(u_int32_t id);
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
 
 private:

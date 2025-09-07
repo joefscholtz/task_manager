@@ -1,5 +1,6 @@
 #include "calendar.hpp"
 #include "db.hpp"
+#include <sys/types.h>
 
 namespace task_manager {
 
@@ -170,11 +171,10 @@ bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
 bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
-      _storage.remove(*event_ptr);
+      _storage.remove<Event>(event_ptr->get_id());
       return true;
     });
 
-    // Remove from all internal vectors to keep calendar consistent
     auto remove_from_vector = [&](auto &vec) {
       vec.erase(std::remove(vec.begin(), vec.end(), event_ptr), vec.end());
     };
@@ -190,6 +190,27 @@ bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {
     return false;
   } catch (...) {
     std::cerr << "Unknown error removing event" << std::endl;
+    return false;
+  }
+}
+
+bool Calendar::remove_event_by_id(uint32_t id) {
+  auto it = std::find_if(
+      this->_all_events.begin(), this->_all_events.end(),
+      [&](const auto &event_ptr) { return event_ptr->get_id() == id; });
+
+  if (it != this->_all_events.end()) {
+    auto event_ptr = *it;
+    if (this->remove_event_from_db(event_ptr)) {
+      std::cout << "Removed event with id: " << event_ptr->get_id()
+                << std::endl;
+      return true;
+    } else {
+      std::cerr << "Failed to remove event from DB\n";
+      return false;
+    }
+  } else {
+    std::cout << "Event not found" << std::endl;
     return false;
   }
 }
