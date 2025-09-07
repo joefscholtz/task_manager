@@ -24,7 +24,6 @@ add_executable(task_manager_cli
     src/cli.cpp
     src/calendar.cpp
     src/event.cpp
-    src/db.cpp
 )
 
 target_include_directories(task_manager_cli

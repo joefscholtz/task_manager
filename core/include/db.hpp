@@ -1,23 +1,35 @@
 #pragma once
-#include "defines.hpp"
 #include "event.hpp"
-#include <sqlite_orm/sqlite_orm.h>
+#include "sqlite_orm/sqlite_orm.h"
+#include <cstdlib>
+#include <filesystem>
+#include <string>
 
 namespace task_manager {
 
-inline auto init_storage(const std::string &db_path) {
-  using namespace sqlite_orm;
+using namespace sqlite_orm;
 
+inline std::string get_user_db_path() {
+  const char *xdg_data = std::getenv("XDG_DATA_HOME");
+  std::filesystem::path base =
+      xdg_data ? xdg_data
+               : std::filesystem::path(std::getenv("HOME")) / ".local/share";
+  std::filesystem::create_directories(base / "task_manager");
+  return (base / "task_manager" / "task_manager.db").string();
+}
+
+inline auto init_storage(const std::string &db_path = get_user_db_path()) {
   return make_storage(
       db_path,
-      make_table("Event",
-                 make_column("id", &Event::_id, autoincrement(), primary_key()),
+      make_table("events", make_column("id", &Event::_id, primary_key()),
                  make_column("name", &Event::_name),
                  make_column("description", &Event::_description),
-                 make_column("start", &Event::_start),
-                 make_column("end", &Event::_end),
+                 make_column("start", &Event::_start_db),
+                 make_column("end", &Event::_end_db),
                  make_column("ongoing", &Event::_ongoing)));
 }
 
-using Storage = decltype(init_storage(""));
+// define the Storage type alias at namespace scope
+// using Storage = decltype(init_storage(std::declval<std::string>()));
+
 } // namespace task_manager

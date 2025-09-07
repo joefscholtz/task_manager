@@ -1,23 +1,23 @@
 #include "calendar.hpp"
+#include "db.hpp"
 
 namespace task_manager {
 
 int Calendar::tick() {
-  this->now = std::chrono::system_clock::now();
+  this->_now = std::chrono::system_clock::now();
   this->update_events();
   return 0;
 }
 
 bool Calendar::update_events() {
-  std::vector<std::shared_ptr<Event>> ongoing_copy = this->_ongoing_events;
   this->_past_events.clear();
-  this->_future_events.clear();
   this->_ongoing_events.clear();
+  this->_future_events.clear();
 
   for (auto &event : this->_all_events) {
-    if (event->get_end() < this->now) {
+    if (event->get_end() < this->_now) {
       this->_past_events.push_back(event);
-    } else if (event->get_start() > this->now) {
+    } else if (event->get_start() > this->_now) {
       this->_future_events.push_back(event);
     } else {
       this->_ongoing_events.push_back(event);
@@ -28,21 +28,33 @@ bool Calendar::update_events() {
 
 bool Calendar::add_event(Event &event) {
   auto event_ptr = std::make_shared<Event>(event);
+
   this->_all_events.push_back(event_ptr);
 
-  if (event_ptr->get_end() < this->now) {
+  if (event_ptr->get_end() < this->_now) {
     this->_past_events.push_back(event_ptr);
-  } else if (event_ptr->get_start() > this->now) {
+  } else if (event_ptr->get_start() > this->_now) {
     this->_future_events.push_back(event_ptr);
   } else {
     this->_ongoing_events.push_back(event_ptr);
   }
-
   return true;
 }
 
-std::vector<std::shared_ptr<Event>> Calendar::get_events() {
-  return this->_all_events;
+void Calendar::load_events() {
+  auto storage = this->get_storage();
+  storage.sync_schema();
+  auto db_events = storage.get_all<Event>();
+
+  this->_all_events.clear();
+  this->_all_events.reserve(db_events.size());
+
+  for (auto &ev : db_events) {
+    ev.update_members_from_db();
+    this->add_event(ev);
+  }
+
+  this->update_events();
 }
 
 std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
