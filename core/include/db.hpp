@@ -21,15 +21,13 @@ inline std::string get_user_db_path() {
 inline auto init_storage(const std::string &db_path = get_user_db_path()) {
   return make_storage(
       db_path,
-      make_table("events", make_column("id", &Event::_id, primary_key()),
+      make_table("events",
+                 make_column("id", &Event::_id, primary_key().autoincrement()),
                  make_column("name", &Event::_name),
                  make_column("description", &Event::_description),
                  make_column("start", &Event::_start_db),
                  make_column("end", &Event::_end_db),
                  make_column("ongoing", &Event::_ongoing)));
 }
-
-// define the Storage type alias at namespace scope
-// using Storage = decltype(init_storage(std::declval<std::string>()));
 
 } // namespace task_manager

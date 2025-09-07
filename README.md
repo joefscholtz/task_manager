@@ -73,3 +73,14 @@ Available commands:
   list_events - List all events
 
 ```
+
+##TODO
+
+In `calendar.cpp`:
+
+- [] use log library
+
+Whole project:
+
+- [] Continuous integration
+  - [] database schema change detection

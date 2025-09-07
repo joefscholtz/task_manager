@@ -21,8 +21,10 @@ public:
   inline const std::vector<std::shared_ptr<Event>> get_events() const {
     return this->_all_events;
   }
+  inline Storage &get_storage() { return this->_storage; }
   inline const Storage &get_storage() const { return this->_storage; }
   void load_events();
+  bool save_events();
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
 
 private:

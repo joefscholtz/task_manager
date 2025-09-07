@@ -46,6 +46,12 @@ void Calendar::load_events() {
   storage.sync_schema();
   auto db_events = storage.get_all<Event>();
 
+  // TODO: use log library
+  // std::cout << "Stored Events: " << std::endl;
+  // for (const auto &event : db_events) {
+  //   std::cout << event;
+  // }
+
   this->_all_events.clear();
   this->_all_events.reserve(db_events.size());
 
@@ -57,9 +63,28 @@ void Calendar::load_events() {
   this->update_events();
 }
 
+bool Calendar::save_events() {
+  try {
+    _storage.transaction([&]() {
+      for (auto &event_ptr : this->_all_events) {
+        auto updated_id = _storage.insert(*event_ptr);
+        event_ptr->set_id(updated_id);
+      }
+      return true;
+    });
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error saving events: " << e.what() << std::endl;
+    return false;
+  }
+}
+
 std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
-  for (const auto &event : calendar._all_events) {
-    os << *event;
+  for (size_t i = 0; i < calendar._all_events.size(); ++i) {
+    os << *calendar._all_events[i];
+    if (i < calendar._all_events.size() - 1) {
+      os << "--\n";
+    }
   }
   return os;
 }
