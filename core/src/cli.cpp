@@ -126,6 +126,41 @@ int main() {
         } else {
           std::cout << "Failed to remove event.\n";
         }
+      } else if (cmd == "update") {
+        uint32_t id = 0;
+        std::string name;
+        std::string desc;
+
+        // Parse remaining input
+        std::string token;
+        while (iss >> token) {
+          if (token == "id" && (iss >> token)) {
+            id = static_cast<uint32_t>(std::stoul(token));
+          } else if (token == "name" && std::getline(iss, token)) {
+            trim_leading_ws(token);
+            name = token;
+          } else if (token == "desc" && std::getline(iss, token)) {
+            trim_leading_ws(token);
+            desc = token;
+          }
+        }
+
+        if (id == 0) {
+          std::cout << "Please specify a valid event id. Update cancelled.\n";
+          continue;
+        }
+
+        if (name.empty() && desc.empty()) {
+          std::cout << "Nothing to update. Provide 'name' and/or 'desc'.\n";
+          continue;
+        }
+
+        if (calendar.update_event_by_id(id, name, desc)) {
+          std::cout << "Event " << id << " updated successfully.\n";
+        } else {
+          std::cout << "Failed to update event. Event with id " << id
+                    << " not found.\n";
+        }
       } else if (cmd == "help") {
         std::cout << "Available commands:\n";
         // Find the longest command name for alignment

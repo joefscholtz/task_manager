@@ -168,6 +168,21 @@ bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
   }
 }
 
+bool Calendar::update_event_by_id(uint32_t id, const std::string &name,
+                                  const std::string &desc) {
+  auto it = std::find_if(_all_events.begin(), _all_events.end(),
+                         [id](const auto &e) { return e->get_id() == id; });
+  if (it == _all_events.end())
+    return false;
+
+  auto event_ptr = *it;
+  if (!name.empty())
+    event_ptr->set_name(name);
+  if (!desc.empty())
+    event_ptr->set_description(desc);
+  return update_event_in_db(event_ptr);
+}
+
 bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
