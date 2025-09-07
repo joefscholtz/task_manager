@@ -25,6 +25,7 @@ add_executable(task_manager_cli)
 target_sources(task_manager_cli
     PRIVATE
         src/calendar.cpp
+        src/event.cpp
         src/cli.cpp
 )
 

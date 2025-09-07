@@ -14,3 +14,6 @@ build:
   mkdir -p build
   cmake -B build
   make -j -C build
+
+run:
+  build/core/task_manager_cli

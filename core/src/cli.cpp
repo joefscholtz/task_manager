@@ -1,7 +1,5 @@
 #include "core.hpp"
-#include <iostream>
 #include <replxx.hxx>
-#include <sstream>
 
 using namespace task_manager;
 using namespace replxx;
@@ -14,6 +12,8 @@ int main() {
   rx.set_max_history_size(1000);
 
   while (true) {
+    calendar.tick();
+
     char const *cinput = rx.input("task_manager> ");
     if (cinput == nullptr)
       break; // EOF / Ctrl+D
@@ -26,21 +26,24 @@ int main() {
     std::string cmd;
     iss >> cmd;
 
-    if (cmd == "create_task") {
+    if (cmd == "create_event") {
       std::string title;
-      std::getline(iss, title);
-      if (!title.empty() && title[0] == ' ')
+      if (!std::getline(iss, title) || title.empty()) {
+        std::cout << "Usage: create_event <title>\n";
+        continue; // or return
+      }
+
+      if (title[0] == ' ')
         title.erase(0, 1);
-      // auto id = core.create_task(title);
-      std::cout << "Created task " << ": " << title << "\n";
-      // } else if (cmd == "list_event") {
-      //   for (auto &t : calendar.list_events()) {
-      //     std::cout << t.id << ": " << t.title << "\n";
-      //   }
+
+      auto now = std::chrono::system_clock::now();
+      Event ev(title, now, now + std::chrono::hours(1));
+      calendar.add_event(ev);
+    } else if (cmd == "list_events" || cmd == "ls") {
+      std::cout << calendar;
     } else {
       std::cout << "Unknown command\n";
     }
-
     rx.history_add(input);
   }
 

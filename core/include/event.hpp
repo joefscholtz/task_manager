@@ -1,22 +1,27 @@
 #include "defines.hpp"
 #include "time.hpp"
-#include <chrono>
+#include <string>
 
 namespace task_manager {
 using time_point = std::chrono::system_clock::time_point;
 
 class Event {
 public:
-  Event(const time_point &start, const time_point &end)
-      : _start(start), _end(end) {}
+  Event(const std::string &name, const time_point &start, const time_point &end)
+      : _name(name), _start(start), _end(end) {}
 
   ~Event() = default;
-  inline time_point get_start() { return this->_start; }
+  inline const time_point &get_start() const { return this->_start; }
   inline void set_start(time_point &start) { this->_start = start; }
-  inline time_point get_end() { return this->_end; }
+  inline const time_point &get_end() const { return this->_end; }
   inline void set_end(time_point &end) { this->_end = end; }
 
-  inline std::string get_description() { return this->_description; }
+  inline const std::string &get_name() const { return this->_name; }
+  inline void set_name(std::string &name) { this->_name = name; }
+
+  inline const std::string &get_description() const {
+    return this->_description;
+  }
   inline void set_description(std::string &description) {
     this->_description = description;
   }
@@ -24,10 +29,13 @@ public:
   inline void start() { this->_ongoing = true; }
   inline void pause() { this->_ongoing = false; }
 
+  friend std::ostream &operator<<(std::ostream &os, const Event &event);
+
 private:
   time_point _created, _last_changed;
   time_point _start, _end;
-  std::string _description;
+  std::string _name, _description;
+  int32_t _id;
   bool _ongoing;
 };
 } // namespace task_manager
