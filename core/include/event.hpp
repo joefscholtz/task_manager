@@ -2,6 +2,7 @@
 #include "defines.hpp"
 #include "time.hpp"
 #include <chrono>
+#include <cstdint>
 #include <iostream>
 #include <string>
 
@@ -11,8 +12,8 @@ using time_point = std::chrono::system_clock::time_point;
 class Event {
 public:
   Event(const std::string &name = "", const time_point &start = {},
-        const time_point &end = {})
-      : _name(name), _id(0) {
+        const time_point &end = {}, const uint32_t id = 0)
+      : _name(name), _id(id) {
     set_start(start);
     set_end(end);
     _ongoing = false;
@@ -27,8 +28,8 @@ public:
     _end = time_point(std::chrono::microseconds(_end_db));
   }
 
-  inline const int32_t &get_id() const { return this->_id; }
-  inline void set_id(int32_t id) { this->_id = id; }
+  inline const uint32_t &get_id() const { return this->_id; }
+  inline void set_id(uint32_t id) { this->_id = id; }
 
   inline const std::string &get_name() const { return this->_name; }
   inline void set_name(const std::string &name) { this->_name = name; }
@@ -64,7 +65,7 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Event &event);
 
-  int32_t _id;
+  uint32_t _id;
   time_point _start, _end;
   std::string _name;
   std::string _description;

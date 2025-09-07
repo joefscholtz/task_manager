@@ -27,7 +27,6 @@ int main() {
         {"add", "Add a new event. Usage: add [event name]"},
         {"help", "Show this help message."},
         {"list", "List all events."},
-        {"save", "Save all new or modified events to the database."},
         {"exit", "Exit the application."}};
 
     repl.set_completion_callback([&commands](const std::string &context,
@@ -93,7 +92,7 @@ int main() {
         auto now = std::chrono::system_clock::now();
         Event ev(name, now, now + std::chrono::hours(1));
 
-        if (calendar.add_event(ev)) {
+        if (calendar.create_event(ev)) {
           std::cout << "Event '" << name << "' added successfully!\n";
         } else {
           std::cout << "Failed to add event.\n";
@@ -112,13 +111,6 @@ int main() {
         for (auto const &[cmd_name, desc] : commands) {
           std::cout << "  " << std::left << std::setw(max_len + 2) << cmd_name
                     << desc << "\n";
-        }
-      } else if (cmd == "save") {
-        std::cout << "Saving events to database...\n";
-        if (calendar.save_events()) {
-          std::cout << "Successfully saved all events.\n";
-        } else {
-          std::cout << "An error occurred while saving.\n";
         }
       } else {
         std::cout << "Unknown command: '" << cmd
