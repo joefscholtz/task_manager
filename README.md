@@ -3,26 +3,26 @@
 Calendar and task management library. Project structure:
 
 ```
- CMakeLists.txt
- core
-├──  CMakeLists.txt
-├──  include
-│   ├──  calendar.hpp
-│   ├──  cli.hpp
-│   ├──  core.hpp
-│   ├──  db.hpp
-│   ├──  defines.hpp
-│   ├──  event.hpp
-│   └──  time.hpp
-└──  src
-    ├──  calendar.cpp
-    ├──  cli.cpp
-    ├──  db.cpp
-    └──  event.cpp
- deamon
- history.txt
- justfile
-󰂺 README.md
+core/
+├── CMakeLists.txt
+├── include/
+│   ├── calendar.hpp
+│   ├── cli.hpp
+│   ├── core.hpp
+│   ├── db.hpp
+│   ├── defines.hpp
+│   ├── event.hpp
+│   └── time.hpp
+└── src/
+    ├── calendar.cpp
+    ├── cli.cpp
+    ├── db.cpp
+    └── event.cpp
+deamon/
+CMakeLists.txt
+history.txt
+justfile
+README.md
 
 ```
 
