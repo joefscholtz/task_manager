@@ -1,22 +1,38 @@
-#include "defines.hpp"
+#pragma once
+#include "db.hpp"
 #include "event.hpp"
-#include "time.hpp"
+#include <chrono>
+#include <iostream>
+#include <memory>
+#include <vector>
 
 namespace task_manager {
+
 class Calendar {
 public:
-  Calendar() {}
+  using Storage = decltype(init_storage());
+
+  Calendar(Storage &storage) : _storage(storage) { load_events(); }
   ~Calendar() = default;
+
   int tick();
   bool update_events();
   bool add_event(Event &event);
-  std::vector<std::shared_ptr<Event>> get_events();
+  inline const std::vector<std::shared_ptr<Event>> get_events() const {
+    return this->_all_events;
+  }
+  inline Storage &get_storage() { return this->_storage; }
+  inline const Storage &get_storage() const { return this->_storage; }
+  void load_events();
+  bool save_events();
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
 
 private:
   std::vector<std::shared_ptr<Event>> _past_events, _ongoing_events,
       _future_events, _all_events;
-  std::chrono::time_point<std::chrono::system_clock> now =
+  Storage &_storage;
+  std::chrono::time_point<std::chrono::system_clock> _now =
       std::chrono::system_clock::now();
 };
+
 } // namespace task_manager

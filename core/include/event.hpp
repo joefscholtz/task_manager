@@ -1,5 +1,8 @@
+#pragma once
 #include "defines.hpp"
 #include "time.hpp"
+#include <chrono>
+#include <iostream>
 #include <string>
 
 namespace task_manager {
@@ -7,23 +10,53 @@ using time_point = std::chrono::system_clock::time_point;
 
 class Event {
 public:
-  Event(const std::string &name, const time_point &start, const time_point &end)
-      : _name(name), _start(start), _end(end) {}
+  Event(const std::string &name = "", const time_point &start = {},
+        const time_point &end = {})
+      : _name(name), _id(0) {
+    set_start(start);
+    set_end(end);
+    _ongoing = false;
+  }
 
   ~Event() = default;
-  inline const time_point &get_start() const { return this->_start; }
-  inline void set_start(time_point &start) { this->_start = start; }
-  inline const time_point &get_end() const { return this->_end; }
-  inline void set_end(time_point &end) { this->_end = end; }
+
+  // This new method will synchronize your time_point members
+  // after the ORM populates the _start_db and _end_db members.
+  void update_members_from_db() {
+    _start = time_point(std::chrono::microseconds(_start_db));
+    _end = time_point(std::chrono::microseconds(_end_db));
+  }
+
+  inline const int32_t &get_id() const { return this->_id; }
+  inline void set_id(int32_t id) { this->_id = id; }
 
   inline const std::string &get_name() const { return this->_name; }
-  inline void set_name(std::string &name) { this->_name = name; }
+  inline void set_name(const std::string &name) { this->_name = name; }
 
   inline const std::string &get_description() const {
     return this->_description;
   }
-  inline void set_description(std::string &description) {
+  inline void set_description(const std::string &description) {
     this->_description = description;
+  }
+
+  inline const time_point &get_start() const { return this->_start; }
+
+  inline void set_start(const time_point &start) {
+    this->_start = start;
+    this->_start_db =
+        std::chrono::time_point_cast<std::chrono::microseconds>(start)
+            .time_since_epoch()
+            .count();
+  }
+
+  inline const time_point &get_end() const { return this->_end; }
+
+  inline void set_end(const time_point &end) {
+    this->_end = end;
+    this->_end_db = std::chrono::time_point_cast<std::chrono::microseconds>(end)
+                        .time_since_epoch()
+                        .count();
   }
 
   inline void start() { this->_ongoing = true; }
@@ -31,11 +64,12 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Event &event);
 
-private:
-  time_point _created, _last_changed;
-  time_point _start, _end;
-  std::string _name, _description;
   int32_t _id;
+  time_point _start, _end;
+  std::string _name;
+  std::string _description;
+  long long _start_db; // sqlite3 format for _start
+  long long _end_db;   // sqlite3 format for _end
   bool _ongoing;
 };
 } // namespace task_manager

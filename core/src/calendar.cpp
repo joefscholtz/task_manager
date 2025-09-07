@@ -1,34 +1,39 @@
 #include "calendar.hpp"
+#include "db.hpp"
 
 namespace task_manager {
+
 int Calendar::tick() {
-  now = std::chrono::system_clock::now();
-  update_events();
+  this->_now = std::chrono::system_clock::now();
+  this->update_events();
   return 0;
 }
 
 bool Calendar::update_events() {
-  for (auto &event : this->_ongoing_events) {
-    if (event->get_end() < now) {
-      this->_past_events.emplace_back(std::move(event));
-      continue;
-    }
-    if (event->get_start() > now) {
-      this->_future_events.emplace_back(std::move(event));
-      continue;
+  this->_past_events.clear();
+  this->_ongoing_events.clear();
+  this->_future_events.clear();
+
+  for (auto &event : this->_all_events) {
+    if (event->get_end() < this->_now) {
+      this->_past_events.push_back(event);
+    } else if (event->get_start() > this->_now) {
+      this->_future_events.push_back(event);
+    } else {
+      this->_ongoing_events.push_back(event);
     }
   }
   return true;
 }
+
 bool Calendar::add_event(Event &event) {
   auto event_ptr = std::make_shared<Event>(event);
-  auto start = event_ptr->get_start(); // Assuming event_ptr after the move
-  auto end = event_ptr->get_end();
 
   this->_all_events.push_back(event_ptr);
-  if (end < now) {
+
+  if (event_ptr->get_end() < this->_now) {
     this->_past_events.push_back(event_ptr);
-  } else if (start > now) {
+  } else if (event_ptr->get_start() > this->_now) {
     this->_future_events.push_back(event_ptr);
   } else {
     this->_ongoing_events.push_back(event_ptr);
@@ -36,14 +41,52 @@ bool Calendar::add_event(Event &event) {
   return true;
 }
 
-std::vector<std::shared_ptr<Event>> Calendar::get_events() {
-  return this->_all_events;
+void Calendar::load_events() {
+  auto storage = this->get_storage();
+  storage.sync_schema();
+  auto db_events = storage.get_all<Event>();
+
+  // TODO: use log library
+  // std::cout << "Stored Events: " << std::endl;
+  // for (const auto &event : db_events) {
+  //   std::cout << event;
+  // }
+
+  this->_all_events.clear();
+  this->_all_events.reserve(db_events.size());
+
+  for (auto &ev : db_events) {
+    ev.update_members_from_db();
+    this->add_event(ev);
+  }
+
+  this->update_events();
+}
+
+bool Calendar::save_events() {
+  try {
+    _storage.transaction([&]() {
+      for (auto &event_ptr : this->_all_events) {
+        auto updated_id = _storage.insert(*event_ptr);
+        event_ptr->set_id(updated_id);
+      }
+      return true;
+    });
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error saving events: " << e.what() << std::endl;
+    return false;
+  }
 }
 
 std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
-  for (const auto &event : calendar._all_events) {
-    os << *event;
+  for (size_t i = 0; i < calendar._all_events.size(); ++i) {
+    os << *calendar._all_events[i];
+    if (i < calendar._all_events.size() - 1) {
+      os << "--\n";
+    }
   }
   return os;
 }
+
 } // namespace task_manager
