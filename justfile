@@ -7,8 +7,13 @@ default:
 install:
   @echo "not implemented"
 
-rebuild:
-  @echo "not implemented"
+rebuild: && build
+  rm -rf build
 
 build:
-  @echo "not implemented"
+  mkdir -p build
+  cmake -B build
+  make -j -C build
+
+run:
+  build/core/task_manager_cli
