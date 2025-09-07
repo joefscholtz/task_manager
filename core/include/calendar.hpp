@@ -16,7 +16,7 @@ public:
   ~Calendar() = default;
 
   int tick();
-  bool update_events();
+  bool update_events(bool clear = false);
   bool add_event(Event &event);
   inline const std::vector<std::shared_ptr<Event>> get_events() const {
     return this->_all_events;

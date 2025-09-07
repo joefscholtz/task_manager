@@ -3,6 +3,8 @@
 
 namespace task_manager {
 
+// DEFAULT_EVENT_ID =
+
 std::ostream &operator<<(std::ostream &os, const Event &event) {
   os << "Id: " << event.get_id() << "\n"
      << "Name: " << event.get_name() << "\n"
