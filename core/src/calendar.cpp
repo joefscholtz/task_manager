@@ -1,5 +1,6 @@
 #include "calendar.hpp"
 #include "db.hpp"
+#include <sys/types.h>
 
 namespace task_manager {
 
@@ -151,9 +152,83 @@ bool Calendar::create_event(Event &event, const time_point &time_p) {
   return true;
 }
 
-bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {}
+bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
+  try {
+    _storage.transaction([&]() {
+      _storage.update(*event_ptr);
+      return true;
+    });
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error updating event: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cerr << "Unknown error updating event" << std::endl;
+    return false;
+  }
+}
 
-bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {}
+bool Calendar::update_event_by_id(uint32_t id, const std::string &name,
+                                  const std::string &desc) {
+  auto it = std::find_if(_all_events.begin(), _all_events.end(),
+                         [id](const auto &e) { return e->get_id() == id; });
+  if (it == _all_events.end())
+    return false;
+
+  auto event_ptr = *it;
+  if (!name.empty())
+    event_ptr->set_name(name);
+  if (!desc.empty())
+    event_ptr->set_description(desc);
+  return update_event_in_db(event_ptr);
+}
+
+bool Calendar::remove_event_from_db(std::shared_ptr<Event> &event_ptr) {
+  try {
+    _storage.transaction([&]() {
+      _storage.remove<Event>(event_ptr->get_id());
+      return true;
+    });
+
+    auto remove_from_vector = [&](auto &vec) {
+      vec.erase(std::remove(vec.begin(), vec.end(), event_ptr), vec.end());
+    };
+
+    remove_from_vector(this->_all_events);
+    remove_from_vector(this->_past_events);
+    remove_from_vector(this->_ongoing_events);
+    remove_from_vector(this->_future_events);
+
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error removing event: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cerr << "Unknown error removing event" << std::endl;
+    return false;
+  }
+}
+
+bool Calendar::remove_event_by_id(uint32_t id) {
+  auto it = std::find_if(
+      this->_all_events.begin(), this->_all_events.end(),
+      [&](const auto &event_ptr) { return event_ptr->get_id() == id; });
+
+  if (it != this->_all_events.end()) {
+    auto event_ptr = *it;
+    if (this->remove_event_from_db(event_ptr)) {
+      std::cout << "Removed event with id: " << event_ptr->get_id()
+                << std::endl;
+      return true;
+    } else {
+      std::cerr << "Failed to remove event from DB\n";
+      return false;
+    }
+  } else {
+    std::cout << "Event not found" << std::endl;
+    return false;
+  }
+}
 
 std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
   for (size_t i = 0; i < calendar._all_events.size(); ++i) {

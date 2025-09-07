@@ -15,5 +15,4 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(3rd_party)
 add_subdirectory(core)
-# add_subdirectory(app)
-# add_subdirectory(daemon)
+# add_subdirectory(api)

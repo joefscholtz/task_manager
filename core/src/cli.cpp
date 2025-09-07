@@ -70,13 +70,13 @@ int main() {
 
       } else if (cmd == "add") {
         std::string name;
-        std::getline(iss, name); // Get the rest of the line as the event name
+        std::getline(iss, name);
         trim_leading_ws(name);
 
         // If name is empty, it means the user just typed "add"
         if (name.empty()) {
           char const *name_input = repl.input("  event name> ");
-          if (name_input == nullptr) { // User pressed Ctrl+D
+          if (name_input == nullptr) {
             std::cout << "\nAdd operation cancelled.\n";
             continue;
           }
@@ -98,6 +98,69 @@ int main() {
           std::cout << "Failed to add event.\n";
         }
 
+      } else if (cmd == "remove" || cmd == "rm") {
+        std::string id;
+        std::getline(iss, id);
+        trim_leading_ws(id);
+
+        // If name is empty, it means the user just typed "remove"
+        if (id.empty()) {
+          char const *id_input = repl.input("  event id> ");
+          if (id_input == nullptr) {
+            std::cout << "\nRemove operation cancelled.\n";
+            continue;
+          }
+          id = id_input;
+        }
+
+        // Ensure we have a id before proceeding
+        if (id.empty()) {
+          std::cout
+              << "Event id cannot be empty. Remove operation cancelled.\n";
+          continue;
+        }
+
+        if (calendar.remove_event_by_id(
+                static_cast<uint32_t>(std::stoul(id)))) {
+          std::cout << "Event with id '" << id << "' removed successfully!\n";
+        } else {
+          std::cout << "Failed to remove event.\n";
+        }
+      } else if (cmd == "update") {
+        uint32_t id = 0;
+        std::string name;
+        std::string desc;
+
+        // Parse remaining input
+        std::string token;
+        while (iss >> token) {
+          if (token == "id" && (iss >> token)) {
+            id = static_cast<uint32_t>(std::stoul(token));
+          } else if (token == "name" && std::getline(iss, token)) {
+            trim_leading_ws(token);
+            name = token;
+          } else if (token == "desc" && std::getline(iss, token)) {
+            trim_leading_ws(token);
+            desc = token;
+          }
+        }
+
+        if (id == 0) {
+          std::cout << "Please specify a valid event id. Update cancelled.\n";
+          continue;
+        }
+
+        if (name.empty() && desc.empty()) {
+          std::cout << "Nothing to update. Provide 'name' and/or 'desc'.\n";
+          continue;
+        }
+
+        if (calendar.update_event_by_id(id, name, desc)) {
+          std::cout << "Event " << id << " updated successfully.\n";
+        } else {
+          std::cout << "Failed to update event. Event with id " << id
+                    << " not found.\n";
+        }
       } else if (cmd == "help") {
         std::cout << "Available commands:\n";
         // Find the longest command name for alignment
