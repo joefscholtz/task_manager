@@ -1,5 +1,9 @@
+#pragma once
 #include "defines.hpp"
 #include "time.hpp"
+#include <chrono>
+#include <format>
+#include <iostream>
 #include <string>
 
 namespace task_manager {
@@ -7,12 +11,15 @@ using time_point = std::chrono::system_clock::time_point;
 
 class Event {
 public:
+  Event() = default; // needed by sqlite_orm
   Event(const std::string &name, const time_point &start, const time_point &end)
-      : _name(name), _start(start), _end(end) {}
+      : _name(name), _start(start), _end(end), _ongoing(false) {}
 
   ~Event() = default;
+
   inline const time_point &get_start() const { return this->_start; }
   inline void set_start(time_point &start) { this->_start = start; }
+
   inline const time_point &get_end() const { return this->_end; }
   inline void set_end(time_point &end) { this->_end = end; }
 
@@ -31,11 +38,11 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Event &event);
 
-private:
+  // public for ORM access
+  int32_t _id = 0;
   time_point _created, _last_changed;
   time_point _start, _end;
   std::string _name, _description;
-  int32_t _id;
-  bool _ongoing;
+  bool _ongoing = false;
 };
 } // namespace task_manager

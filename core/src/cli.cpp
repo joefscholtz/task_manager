@@ -1,4 +1,6 @@
+#include "calendar.hpp"
 #include "core.hpp"
+#include "db.hpp"
 #include <replxx.hxx>
 
 using namespace task_manager;
@@ -29,6 +31,7 @@ void print_help(const std::map<std::string, Command> &commands,
 int main() {
   Calendar calendar;
   Replxx rx;
+  auto storage = init_storage("task_manager.db");
 
   const std::map<std::string, Command> commands = {
       {"create_event",
@@ -36,55 +39,47 @@ int main() {
       {"list_events", {"list_events", "List all events"}},
       {"help", {"help [command]", "Show help for commands"}}};
 
-  // REPLXX autocomplete
-  rx.set_completion_callback(
-      [&commands](std::string const &text, int & /*context*/) {
-        std::vector<Replxx::Completion> completions;
-        for (auto &[name, c] : commands) {
-          if (name.find(text) == 0) {
-            completions.emplace_back(name);
-          }
-        }
-        return completions;
-      });
-
-  rx.history_load("history.txt"); // save/restore history
+  rx.history_load("history.txt");
   rx.set_max_history_size(1000);
 
   while (true) {
     calendar.tick();
 
     char const *cinput = rx.input("task_manager> ");
-    if (cinput == nullptr)
-      break; // EOF / Ctrl+D
-    std::string input(cinput);
-
-    if (input == "exit" || input == "quit")
+    if (!cinput)
       break;
+    std::string input(cinput);
+    if (input.empty())
+      continue;
 
     std::istringstream iss(input);
     std::string cmd;
     iss >> cmd;
 
+    if (cmd == "exit" || cmd == "quit")
+      break;
+
     if (cmd == "help") {
-      std::string arg;
-      iss >> arg; // optional command
-      print_help(commands, arg);
+      print_help(commands);
     } else if (cmd == "create_event") {
       std::string title;
       if (!std::getline(iss, title) || title.empty()) {
         std::cout << "Usage: create_event <title>\n";
         continue;
       }
-
       if (title[0] == ' ')
         title.erase(0, 1);
 
       auto now = std::chrono::system_clock::now();
       Event ev(title, now, now + std::chrono::hours(1));
       calendar.add_event(ev);
+      save_event(ev, storage);
+
     } else if (cmd == "list_events" || cmd == "ls") {
-      std::cout << calendar;
+      auto events = get_all_events(storage);
+      for (auto &ev : events) {
+        std::cout << ev;
+      }
     } else {
       std::cout << "Unknown command\n";
     }
@@ -93,5 +88,4 @@ int main() {
   }
 
   rx.history_save("history.txt");
-  return 0;
 }

@@ -1,38 +1,43 @@
 #include "calendar.hpp"
 
 namespace task_manager {
+
 int Calendar::tick() {
-  now = std::chrono::system_clock::now();
-  update_events();
+  this->now = std::chrono::system_clock::now();
+  this->update_events();
   return 0;
 }
 
 bool Calendar::update_events() {
-  for (auto &event : this->_ongoing_events) {
-    if (event->get_end() < now) {
-      this->_past_events.emplace_back(std::move(event));
-      continue;
-    }
-    if (event->get_start() > now) {
-      this->_future_events.emplace_back(std::move(event));
-      continue;
+  std::vector<std::shared_ptr<Event>> ongoing_copy = this->_ongoing_events;
+  this->_past_events.clear();
+  this->_future_events.clear();
+  this->_ongoing_events.clear();
+
+  for (auto &event : this->_all_events) {
+    if (event->get_end() < this->now) {
+      this->_past_events.push_back(event);
+    } else if (event->get_start() > this->now) {
+      this->_future_events.push_back(event);
+    } else {
+      this->_ongoing_events.push_back(event);
     }
   }
   return true;
 }
+
 bool Calendar::add_event(Event &event) {
   auto event_ptr = std::make_shared<Event>(event);
-  auto start = event_ptr->get_start(); // Assuming event_ptr after the move
-  auto end = event_ptr->get_end();
-
   this->_all_events.push_back(event_ptr);
-  if (end < now) {
+
+  if (event_ptr->get_end() < this->now) {
     this->_past_events.push_back(event_ptr);
-  } else if (start > now) {
+  } else if (event_ptr->get_start() > this->now) {
     this->_future_events.push_back(event_ptr);
   } else {
     this->_ongoing_events.push_back(event_ptr);
   }
+
   return true;
 }
 
@@ -46,4 +51,5 @@ std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
   }
   return os;
 }
+
 } // namespace task_manager

@@ -30,6 +30,7 @@ README.md
 
 - cmake
 - make
+- sqlite3
 - just \[Optional\]
 
 ## Build
