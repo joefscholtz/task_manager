@@ -1,0 +1,31 @@
+name: C++ CI
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # This is the crucial step to add
+      - name: Create client_secret.json from Secret
+        run: echo "${{ secrets.GOOGLE_CLIENT_SECRET_JSON }}" > client_secret.json
+
+      - name: Install Dependencies
+        run: |
+          # Add commands here to install CMake, CPR, etc.
+          # For example: sudo apt-get update && sudo apt-get install -y libcurl4-openssl-dev libssl-dev cmake
+
+      - name: Build and Run
+        run: |
+          # Your C++ code will now find the client_secret.json file,
+          # just like it does on your local machine.
+          just build
+          # just test (if you have tests that need the API)

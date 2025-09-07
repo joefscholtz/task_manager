@@ -31,3 +31,4 @@ target_include_directories(task_manager_cli
 )
 
 target_link_libraries(task_manager_cli PRIVATE third_party)
+# target_link_libraries(task_manager_cli PRIVATE third_party api)
