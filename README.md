@@ -1,11 +1,36 @@
 ## Task Manager
 
-Calendar and task management library
+Calendar and task management library. Project structure:
+
+```
+core/
+├── CMakeLists.txt
+├── include/
+│   ├── calendar.hpp
+│   ├── cli.hpp
+│   ├── core.hpp
+│   ├── db.hpp
+│   ├── defines.hpp
+│   ├── event.hpp
+│   └── time.hpp
+└── src/
+    ├── calendar.cpp
+    ├── cli.cpp
+    ├── db.cpp
+    └── event.cpp
+deamon/
+CMakeLists.txt
+history.txt
+justfile
+README.md
+
+```
 
 ## Prerequisites
 
 - cmake
 - make
+- sqlite3
 - just \[Optional\]
 
 ## Build
@@ -48,3 +73,14 @@ Available commands:
   list_events - List all events
 
 ```
+
+##TODO
+
+In `calendar.cpp`:
+
+- [] use log library
+
+Whole project:
+
+- [] Continuous integration
+  - [] database schema change detection

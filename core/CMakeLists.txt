@@ -20,25 +20,15 @@
 #     OUTPUT_NAME "task_manager_cli"
 # )
 
-add_executable(task_manager_cli)
-
-target_sources(task_manager_cli
-    PRIVATE
-        src/calendar.cpp
-        src/event.cpp
-        src/cli.cpp
+add_executable(task_manager_cli
+    src/cli.cpp
+    src/calendar.cpp
+    src/event.cpp
 )
 
 target_include_directories(task_manager_cli
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(task_manager_cli
-    PRIVATE
-        replxx
-)
-
-set_target_properties(task_manager_cli PROPERTIES
-    OUTPUT_NAME "task_manager_cli"
-)
+target_link_libraries(task_manager_cli PRIVATE third_party)
+# target_link_libraries(task_manager_cli PRIVATE third_party api)

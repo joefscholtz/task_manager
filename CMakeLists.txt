@@ -3,6 +3,7 @@ project(task_manager LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE Release)
 
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -14,5 +15,4 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(3rd_party)
 add_subdirectory(core)
-# add_subdirectory(app)
-# add_subdirectory(daemon)
+# add_subdirectory(api)
