@@ -1,5 +1,4 @@
 #include "event.hpp"
-#include <format>
 
 namespace task_manager {
 

@@ -1,12 +1,14 @@
 #pragma once
 #include "defines.hpp"
 #include <chrono>
-#include <format>
 #include <iomanip> // for std::get_time
 
 using namespace std::literals;
 
-time_point parse_datetime(const std::string &datetime_str) {
+namespace task_manager {
+using time_point = std::chrono::system_clock::time_point;
+
+inline time_point parse_datetime(const std::string &datetime_str) {
   if (datetime_str.empty())
     return {};
 
@@ -19,3 +21,4 @@ time_point parse_datetime(const std::string &datetime_str) {
 
   return std::chrono::system_clock::from_time_t(std::mktime(&tm));
 }
+} // namespace task_manager

@@ -1,6 +1,5 @@
 #include "calendar.hpp"
 #include "db.hpp"
-#include <sys/types.h>
 
 namespace task_manager {
 
@@ -285,7 +284,7 @@ void Calendar::sync_external_events() {
                 << std::endl;
     }
   }
-  update_events(); // Re-classify all events
+  update_ongoing_events();
   std::cout << "Sync complete." << std::endl;
 }
 

@@ -1,12 +1,5 @@
 #include "core.hpp"
-#include "db.hpp"
-#include <iomanip> // Required for std::setw
-#include <iostream>
-#include <map>
 #include <replxx.hxx>
-#include <sstream>
-#include <string>
-#include <vector>
 
 using namespace task_manager;
 using namespace replxx;

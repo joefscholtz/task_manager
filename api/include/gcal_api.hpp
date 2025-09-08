@@ -37,5 +37,5 @@ private:
   std::string _refresh_token;
 
   std::string _secret_file_path;
-  const std::string _token_file_path = "gcal_token.json";
+  const std::string _token_file_path = ".env/gcal_token.json";
 };

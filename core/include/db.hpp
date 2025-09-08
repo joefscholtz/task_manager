@@ -1,9 +1,7 @@
 #pragma once
+#include "defines.hpp"
 #include "event.hpp"
 #include "sqlite_orm/sqlite_orm.h"
-#include <cstdlib>
-#include <filesystem>
-#include <string>
 
 namespace task_manager {
 
@@ -23,6 +21,7 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
       db_path,
       make_table("events",
                  make_column("id", &Event::_id, primary_key().autoincrement()),
+                 make_column("iCalUID", &Event::_iCalUID, unique()),
                  make_column("name", &Event::_name),
                  make_column("description", &Event::_description),
                  make_column("start", &Event::_start_db),

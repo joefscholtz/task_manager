@@ -1,13 +1,8 @@
 #pragma once
 #include "defines.hpp"
 #include "time.hpp"
-#include <chrono>
-#include <cstdint>
-#include <iostream>
-#include <string>
 
 namespace task_manager {
-using time_point = std::chrono::system_clock::time_point;
 
 class Event {
 public:
@@ -68,7 +63,8 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Event &event);
 
-  uint32_t _id, _iCalUID;
+  uint32_t _id;
+  std::string _iCalUID;
   time_point _start, _end;
   std::string _name;
   std::string _description;

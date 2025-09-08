@@ -1,14 +1,11 @@
 #pragma once
 #include "db.hpp"
+#include "defines.hpp"
 #include "event.hpp"
 #include "gcal_api.hpp"
-#include <chrono>
-#include <iostream>
-#include <memory>
-#include <vector>
+#include "time.hpp"
 
 namespace task_manager {
-using time_point = std::chrono::system_clock::time_point;
 
 class Calendar {
 public:
