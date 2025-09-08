@@ -243,18 +243,22 @@ std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
   return os;
 }
 
-void Calendar::link_google_account() {
-  if (_gcal_api) {
-    _gcal_api->authenticate();
+void Calendar::link_google_account(std::string client_secret_path) {
+  this->_gcal_api = std::make_unique<GoogleCalendarAPI>(client_secret_path);
+  if (this->_gcal_api) {
+    this->_gcal_api->authenticate();
   }
 }
 
 void Calendar::sync_external_events() {
-  if (!_gcal_api)
+  if (!this->_gcal_api) {
+    std::cout << "Could not sync. Please use 'link_gcal' to log in."
+              << std::endl;
     return;
+  }
 
   std::cout << "Syncing with Google Calendar..." << std::endl;
-  auto external_events_opt = _gcal_api->list_events();
+  auto external_events_opt = this->_gcal_api->list_events();
 
   if (!external_events_opt) {
     std::cout << "Could not sync. Please use 'link_gcal' to log in."

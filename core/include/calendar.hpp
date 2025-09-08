@@ -11,11 +11,7 @@ class Calendar {
 public:
   using Storage = decltype(init_storage());
 
-  Calendar(Storage &storage)
-      : _storage(storage), _gcal_api(std::make_unique<GoogleCalendarAPI>(
-                               ".env/client_secret.json")) {
-    load_events_from_db();
-  }
+  Calendar(Storage &storage) : _storage(storage) { load_events_from_db(); }
   ~Calendar() = default;
 
   int tick();
@@ -36,7 +32,8 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
 
-  void link_google_account();
+  void link_google_account(
+      std::string client_secret_path = std::string(".env/client_secret.json"));
   void sync_external_events();
 
 private:
