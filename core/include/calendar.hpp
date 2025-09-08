@@ -1,6 +1,7 @@
 #pragma once
 #include "db.hpp"
 #include "event.hpp"
+#include "gcal_api.hpp"
 #include <chrono>
 #include <iostream>
 #include <memory>
@@ -13,7 +14,11 @@ class Calendar {
 public:
   using Storage = decltype(init_storage());
 
-  Calendar(Storage &storage) : _storage(storage) { load_events_from_db(); }
+  Calendar(Storage &storage)
+      : _storage(storage), _gcal_api(std::make_unique<GoogleCalendarAPI>(
+                               ".env/client_secret.json")) {
+    load_events_from_db();
+  }
   ~Calendar() = default;
 
   int tick();
@@ -31,12 +36,17 @@ public:
   bool update_event_by_id(uint32_t id, const std::string &name,
                           const std::string &desc);
   bool remove_event_by_id(u_int32_t id);
+
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
+
+  void link_google_account();
+  void sync_external_events();
 
 private:
   bool load_event(Event &event,
                   const time_point &time_p = std::chrono::system_clock::now());
   void load_events_from_db();
+  void load_events();
   bool save_event_in_db(std::shared_ptr<Event> &event_ptr);
   bool update_event_in_db(std::shared_ptr<Event> &event_ptr);
   bool remove_event_from_db(std::shared_ptr<Event> &event_ptr);
@@ -44,6 +54,7 @@ private:
       _future_events, _all_events;
   Storage &_storage;
   time_point _now = std::chrono::system_clock::now();
+  std::unique_ptr<GoogleCalendarAPI> _gcal_api;
 };
 
 } // namespace task_manager

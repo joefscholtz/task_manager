@@ -172,7 +172,7 @@ GoogleCalendarAPI::list_events(int max_results) {
   std::vector<ApiEvent> events;
   for (const auto &item : (*result_json)["items"]) {
     ApiEvent ev;
-    ev.id = item.value("id", "");
+    ev.iCalUID = item.value("iCalUID", "");
     ev.summary = item.value("summary", "No Title");
     ev.start_time =
         item["start"].value("dateTime", item["start"].value("date", ""));

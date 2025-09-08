@@ -31,6 +31,7 @@ README.md
 - cmake
 - make
 - sqlite3
+- vcpkg
 - just \[Optional\]
 
 ## Build

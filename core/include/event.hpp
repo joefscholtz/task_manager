@@ -31,6 +31,9 @@ public:
   inline const uint32_t &get_id() const { return this->_id; }
   inline void set_id(uint32_t id) { this->_id = id; }
 
+  inline const std::string &get_iCalUID() const { return _iCalUID; }
+  inline void set_iCalUID(const std::string &id) { _iCalUID = id; }
+
   inline const std::string &get_name() const { return this->_name; }
   inline void set_name(const std::string &name) { this->_name = name; }
 
@@ -65,7 +68,7 @@ public:
 
   friend std::ostream &operator<<(std::ostream &os, const Event &event);
 
-  uint32_t _id;
+  uint32_t _id, _iCalUID;
   time_point _start, _end;
   std::string _name;
   std::string _description;

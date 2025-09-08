@@ -30,5 +30,5 @@ target_include_directories(task_manager_cli
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-target_link_libraries(task_manager_cli PRIVATE third_party)
-# target_link_libraries(task_manager_cli PRIVATE third_party api)
+# target_link_libraries(task_manager_cli PRIVATE third_party)
+target_link_libraries(task_manager_cli PRIVATE third_party api)

@@ -121,6 +121,10 @@ void Calendar::load_events_from_db() {
     this->load_event(ev, load_time_p);
   }
 }
+void Calendar::load_events() {
+  this->load_events_from_db();
+  this->sync_external_events();
+}
 
 bool Calendar::save_event_in_db(std::shared_ptr<Event> &event_ptr) {
   try {
@@ -238,6 +242,51 @@ std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
     }
   }
   return os;
+}
+
+void Calendar::link_google_account() {
+  if (_gcal_api) {
+    _gcal_api->authenticate();
+  }
+}
+
+void Calendar::sync_external_events() {
+  if (!_gcal_api)
+    return;
+
+  std::cout << "Syncing with Google Calendar..." << std::endl;
+  auto external_events_opt = _gcal_api->list_events();
+
+  if (!external_events_opt) {
+    std::cout << "Could not sync. Please use 'link_gcal' to log in."
+              << std::endl;
+    return;
+  }
+
+  for (const auto &api_event : *external_events_opt) {
+    bool exists = false;
+    for (const auto &existing_event : _all_events) {
+      if (existing_event->get_iCalUID() == api_event.iCalUID) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      Event new_event;
+      new_event.set_name(api_event.summary);
+      new_event.set_start(parse_datetime(api_event.start_time));
+      new_event.set_end(parse_datetime(api_event.end_time));
+      new_event.set_iCalUID(api_event.iCalUID); // Set the external ID
+
+      // Add to the in-memory list (as a shared_ptr)
+      this->create_event(new_event);
+      std::cout << "  + Added remote event: " << new_event.get_name()
+                << std::endl;
+    }
+  }
+  update_events(); // Re-classify all events
+  std::cout << "Sync complete." << std::endl;
 }
 
 } // namespace task_manager

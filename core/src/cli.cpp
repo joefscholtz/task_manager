@@ -24,9 +24,12 @@ int main() {
     repl.install_window_change_handler();
 
     std::map<std::string, std::string> commands = {
-        {"add", "Add a new event. Usage: add [event name]"},
+        {"add", "Add a new local event"},
+        {"list", "List all local and remote events"},
+        {"save", "Save local events to the database"},
+        {"link_gcal", "Link your Google Calendar account"},
+        {"sync", "Manually sync with external calendars"},
         {"help", "Show this help message."},
-        {"list", "List all events."},
         {"exit", "Exit the application."}};
 
     repl.set_completion_callback([&commands](const std::string &context,
@@ -161,6 +164,10 @@ int main() {
           std::cout << "Failed to update event. Event with id " << id
                     << " not found.\n";
         }
+      } else if (cmd == "link_gcal") {
+        calendar.link_google_account();
+      } else if (cmd == "sync") {
+        calendar.sync_external_events();
       } else if (cmd == "help") {
         std::cout << "Available commands:\n";
         // Find the longest command name for alignment
