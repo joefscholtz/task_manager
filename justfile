@@ -11,10 +11,11 @@ install:
 rebuild: && build
   rm -rf build
 
-build:
-  mkdir -p build
-  cmake -B build
-  make -j -C build
+configure:
+    cmake --preset default
+
+build: configure
+    cmake --build --preset default --parallel
 
 run:
   ./build/core/task_manager_cli
