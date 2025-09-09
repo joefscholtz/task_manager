@@ -12,6 +12,7 @@ add_library(sqlite_orm INTERFACE)
 target_include_directories(sqlite_orm INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite_orm/include
 )
+set(SQLITE_ORM_OPTIONAL_SUPPORTED ON)
 # ===============================
 # json 
 # ===============================

@@ -16,7 +16,7 @@ int main() {
     Replxx repl;
     repl.install_window_change_handler();
 
-    std::map<std::string, std::string> commands = {
+    std::unordered_map<std::string, std::string> commands = {
         {"add", "Add a new local event"},
         {"list", "List all local and remote events"},
         {"save", "Save local events to the database"},

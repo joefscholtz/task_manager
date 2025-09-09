@@ -129,6 +129,8 @@ bool Calendar::save_event_in_db(std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
       auto updated_id = _storage.insert(*event_ptr);
+      // TODO: debug
+      // std::cout << "updated_id: " << updated_id << std::endl;
       event_ptr->set_id(static_cast<uint32_t>(updated_id));
       return true;
     });
@@ -141,7 +143,8 @@ bool Calendar::save_event_in_db(std::shared_ptr<Event> &event_ptr) {
 
 bool Calendar::create_event(Event &event, const time_point &time_p) {
   auto event_ptr = std::make_shared<Event>(event);
-  this->save_event_in_db(event_ptr);
+  if (!this->save_event_in_db(event_ptr))
+    return false;
 
   this->_all_events.push_back(event_ptr);
 

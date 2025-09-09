@@ -49,6 +49,8 @@ private:
   Storage &_storage;
   time_point _now = std::chrono::system_clock::now();
   std::unique_ptr<GoogleCalendarAPI> _gcal_api;
+  // std::unordered_map<std::string, std::unique_ptr<GoogleCalendarAPI>>
+  // _gcal_apis;
 };
 
 } // namespace task_manager
