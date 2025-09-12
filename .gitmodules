@@ -4,3 +4,7 @@
 [submodule "3rd_party/cpp_json_class_gen"]
 	path = 3rd_party/cpp_json_class_gen
 	url = git@github.com:joefscholtz/cpp_json_class_gen.git
+[submodule "3rd_party/sqlite_orm"]
+	path = 3rd_party/sqlite_orm
+	url = git@github.com:fnc12/sqlite_orm.git
+	branch = dev

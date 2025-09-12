@@ -281,8 +281,10 @@ void Calendar::sync_external_events() {
     if (!exists) {
       Event new_event;
       new_event.set_name(api_event.summary);
-      new_event.set_start(parse_datetime(api_event.start.dateTime));
-      new_event.set_end(parse_datetime(api_event.end.dateTime));
+      new_event.set_start(
+          this->_gcal_api->parse_gcal_event_datetime(api_event.start));
+      new_event.set_end(
+          this->_gcal_api->parse_gcal_event_datetime(api_event.end));
 
       new_event.set_iCalUID(api_event.iCalUID); // Set the external ID
       new_event.set_external_api_event(api_event);

@@ -176,4 +176,33 @@ GoogleCalendarAPI::list_events(int max_results) {
 
   return events;
 }
+
+time_point
+GoogleCalendarAPI::parse_gcal_event_datetime(const EventDateTime &event_dt) {
+  // Case 1: It's a timed event with a specific dateTime
+  if (!event_dt.dateTime.empty()) {
+    std::istringstream in{event_dt.dateTime};
+    time_point tp;
+    // The "%Z" or "%z" specifier correctly parses the timezone offset
+    in >> std::chrono::parse("%Y-%m-%dT%H:%M:%S%z", tp);
+    if (!in.fail()) {
+      return tp;
+    }
+  }
+
+  // Case 2: It's an all-day event with only a date
+  if (!event_dt.date.empty()) {
+    std::istringstream in{event_dt.date +
+                          "T00:00:00Z"}; // Treat as start of day in UTC
+    time_point tp;
+    in >> std::chrono::parse("%Y-%m-%dT%H:%M:%S%z", tp);
+    if (!in.fail()) {
+      return tp;
+    }
+  }
+
+  // Case 3: Both are empty or parsing failed
+  return {}; // Return an empty/default time_point
+}
+
 } // namespace task_manager

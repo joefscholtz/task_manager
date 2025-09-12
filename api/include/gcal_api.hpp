@@ -3,16 +3,10 @@
 #include "GCalApiEvent.hpp"
 #include "GCalApiEventsList.hpp"
 #include "nlohmann/json.hpp"
+#include "time.hpp"
 #include <optional>
 #include <string>
 #include <vector>
-
-// struct ApiEvent {
-//   std::string iCalUID;
-//   std::string summary;
-//   std::string start_time;
-//   std::string end_time;
-// };
 
 namespace task_manager {
 class GoogleCalendarAPI {
@@ -22,6 +16,8 @@ public:
   bool authenticate();
 
   std::optional<std::vector<GCalApiEvent>> list_events(int max_results = 100);
+
+  time_point parse_gcal_event_datetime(const EventDateTime &event_dt);
 
 private:
   bool load_secrets();

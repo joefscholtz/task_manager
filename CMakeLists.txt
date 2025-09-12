@@ -13,6 +13,11 @@ endif()
 # Enable folders in IDEs (VSCode, CLion, etc.)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+add_library(shared_includes INTERFACE)
+target_include_directories(shared_includes INTERFACE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/shared/include
+)
+
 add_subdirectory(3rd_party)
 add_subdirectory(core)
 add_subdirectory(api)

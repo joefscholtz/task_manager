@@ -4,16 +4,12 @@ add_library(third_party INTERFACE)
 # Provided by vcpkg
 find_package(cpr REQUIRED)
 find_package(nlohmann_json 3.11.0 REQUIRED)
+find_package(replxx)
 target_link_libraries(third_party INTERFACE 
     cpr::cpr
     nlohmann_json::nlohmann_json
+    replxx::replxx
 )
-
-# ===============================
-# Replxx
-# ===============================
-add_subdirectory(replxx)
-target_link_libraries(third_party INTERFACE replxx)
 
 # ===============================
 # sqlite_orm 
