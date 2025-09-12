@@ -28,6 +28,7 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
                  make_column("start", &Event::_start_db),
                  make_column("end", &Event::_end_db),
                  make_column("ongoing", &Event::_ongoing),
+                 make_column("account_id", &Event::_account_id),
                  foreign_key(&Event::_account_id).references(&Account::_id)),
       make_table(
           "accounts",

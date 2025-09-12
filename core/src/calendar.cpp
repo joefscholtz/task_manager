@@ -104,8 +104,14 @@ bool Calendar::load_event(Event &event, const time_point &time_p) {
 void Calendar::load_events_from_db() {
   auto load_time_p = std::chrono::system_clock::now();
   auto storage = this->get_storage();
+  // TODO: use log library
+  // std::cout << "Got Storage" << std::endl;
   storage.sync_schema();
+  // TODO: use log library
+  // std::cout << "Schema Synced" << std::endl;
   auto db_events = storage.get_all<Event>();
+  // TODO: use log library
+  // std::cout << "Got db events" << std::endl;
 
   // TODO: use log library
   // std::cout << "Stored Events: " << std::endl;
