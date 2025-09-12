@@ -384,4 +384,96 @@ bool Calendar::sync_external_events() {
     return sync_success;
   }
 
+  bool Calendar::sync_external_events() {
+    bool sync_success = true;
+    std::vector<std::unique_ptr<BaseApiEvent>> all_external_events;
+
+    // Iterate through all linked accounts to fetch their events
+    for (const auto &account : this->_accounts) {
+      if (account->get_account_type() == AccountType::GCAL) {
+        if (!this->_gcal_api) {
+          std::cerr << "Error: Google Calendar API is not initialized."
+                    << std::endl;
+          sync_success = false;
+          continue;
+        }
+
+        std::cout << "Syncing with Google Calendar for account: "
+                  << account->get_email() << "..." << std::endl;
+
+        std::optional<std::vector<GCalApiEvent>> fetched_events_opt =
+            this->_gcal_api->list_events(account->get_refresh_token());
+
+        if (!fetched_events_opt) {
+          std::cerr << "Error: Could not sync account: " << account->get_email()
+                    << std::endl;
+          sync_success = false;
+          continue;
+        }
+
+        for (auto &event : fetched_events_opt.value()) {
+          all_external_events.push_back(
+              std::make_unique<GCalApiEvent>(std::move(event)));
+        }
+      }
+    }
+
+    std::cout << "\nTotal events fetched: " << all_external_events.size()
+              << std::endl;
+
+    // Iterate through the aggregated list of all events from all accounts
+    for (const auto &event_ptr : all_external_events) {
+      if (event_ptr->getAccountType() != AccountType::GCAL) {
+        continue;
+      }
+
+      const GCalApiEvent *api_event_ptr =
+          dynamic_cast<const GCalApiEvent *>(event_ptr.get());
+      if (!api_event_ptr) {
+        std::cerr
+            << "Error: Logic bug! Event type is GCAL but dynamic_cast failed."
+            << std::endl;
+        sync_success = false;
+        continue;
+      }
+
+      const GCalApiEvent &api_event = *api_event_ptr;
+
+      bool exists = false;
+      for (const auto &existing_event : _all_events) {
+        if (existing_event->get_iCalUID() == api_event.iCalUID) {
+          exists = true;
+          // TODO: update_event(existing_event, api_event);
+          break;
+        }
+      }
+
+      if (!exists) {
+        Event new_event;
+        new_event.set_name(api_event.summary);
+        new_event.set_start(
+            this->_gcal_api->parse_gcal_event_datetime(api_event.start));
+        new_event.set_end(
+            this->_gcal_api->parse_gcal_event_datetime(api_event.end));
+        new_event.set_iCalUID(api_event.iCalUID);
+        new_event.set_external_api_event(*event_ptr);
+
+        this->create_event(new_event);
+        std::cout << "  + Added remote event: " << new_event.get_name()
+                  << std::endl;
+      }
+    }
+
+    // --- 4. FINALIZATION ---
+    // sync_success &= update_ongoing_events(); // Add any final sync steps
+
+    if (sync_success) {
+      std::cout << "\nSync complete." << std::endl;
+    } else {
+      std::cout << "\nSync completed with one or more errors." << std::endl;
+    }
+
+    return sync_success;
+  }
+
 } // namespace task_manager
