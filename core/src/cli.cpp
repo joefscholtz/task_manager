@@ -10,8 +10,7 @@ void trim_leading_ws(std::string &s) {
 
 int main() {
   try {
-    auto storage = init_storage();
-    Calendar calendar(storage);
+    Calendar calendar;
 
     Replxx repl;
     repl.install_window_change_handler();

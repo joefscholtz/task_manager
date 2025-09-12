@@ -9,3 +9,9 @@
 #include <sys/types.h>
 #include <unordered_map>
 #include <vector>
+
+namespace task_manager {
+
+enum class AccountType { GCAL, UNKNOWN };
+
+}

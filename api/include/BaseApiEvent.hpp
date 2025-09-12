@@ -7,7 +7,10 @@ public:
   BaseApiEvent() {}
   virtual ~BaseApiEvent() = default;
 
-  std::string _api = "";
+  AccountType get_account_type() const { return this->_account_type; }
+
+private:
+  AccountType _account_type = AccountType::UNKOWN;
 };
 
 } // namespace task_manager

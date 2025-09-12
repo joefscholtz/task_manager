@@ -21,4 +21,4 @@ run:
   ./build/core/task_manager_cli
 
 remove-db:
-  rm ~/.local/share/task_manager/task_manager.db
+  rm ~/.local/share/task_manager/task_manager.sqlite3

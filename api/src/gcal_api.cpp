@@ -60,7 +60,6 @@ bool GoogleCalendarAPI::get_tokens_from_auth_code(
   json result = json::parse(r.text);
   _access_token = result["access_token"];
   _refresh_token = result["refresh_token"];
-  save_tokens_to_file();
   return true;
 }
 
@@ -85,14 +84,17 @@ bool GoogleCalendarAPI::authenticate() {
   std::cin >> auth_code;
 
   if (get_tokens_from_auth_code(auth_code)) {
-    std::cout << "\nAuthentication successful! Tokens saved to "
-              << _token_file_path << std::endl;
+    std::cout << "\nAuthentication successful!" << std::endl;
     return true;
   }
   return false;
 }
 
-bool GoogleCalendarAPI::refresh_access_token() {
+bool GoogleCalendarAPI::refresh_access_token(
+    const std::string &refresh_token, const bool &override_refresh_token) {
+  if (!refresh_token.empty() && override_refresh_token)
+    _refresh_token = refresh_token;
+
   if (_refresh_token.empty()) {
     std::cerr << "No refresh token available. Please authenticate again."
               << std::endl;
@@ -109,19 +111,17 @@ bool GoogleCalendarAPI::refresh_access_token() {
   }
   json result = json::parse(r.text);
   _access_token = result["access_token"];
-  // Note: A new refresh token is sometimes returned, but often not.
-  // It's good practice to save the new one if it exists.
   if (result.contains("refresh_token")) {
     _refresh_token = result["refresh_token"];
   }
-  save_tokens_to_file();
   std::cout << "Access token refreshed." << std::endl;
   return true;
 }
 
 std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
     const std::string &url,
-    const std::vector<std::pair<std::string, std::string>> &params) {
+    const std::vector<std::pair<std::string, std::string>> &params,
+    const std::string &refresh_token) {
   auto send_request = [&]() {
     cpr::Parameters cpr_params;
     for (const auto &p : params) {
@@ -134,7 +134,7 @@ std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
   auto r = send_request();
   if (r.status_code == 401) { // 401 Unauthorized, token likely expired
     std::cout << "Access token expired. Attempting to refresh..." << std::endl;
-    if (refresh_access_token()) {
+    if (refresh_access_token(refresh_token)) {
       r = send_request(); // Retry the request with the new token
     }
   }
@@ -149,8 +149,9 @@ std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
 }
 
 std::optional<std::vector<GCalApiEvent>>
-GoogleCalendarAPI::list_events(int max_results) {
-  if (_access_token.empty() && !refresh_access_token()) {
+GoogleCalendarAPI::list_events(int max_results,
+                               const std::string &refresh_token) {
+  if (_access_token.empty() && !refresh_access_token(refresh_token)) {
     std::cout << "Authentication required. Please run the 'gcal_login' command."
               << std::endl;
     return std::nullopt;
@@ -203,6 +204,41 @@ GoogleCalendarAPI::parse_gcal_event_datetime(const EventDateTime &event_dt) {
 
   // Case 3: Both are empty or parsing failed
   return {}; // Return an empty/default time_point
+}
+
+void GoogleCalendarAPI::clear_account() {
+  _access_token = std::string();
+  _refresh_token = std::string();
+  return true;
+}
+
+std::optional<std::string> GoogleCalendarAPI::get_user_email() {
+  if (_access_token.empty()) {
+    std::cerr << "Cannot get user email: No access token available."
+              << std::endl;
+    return std::nullopt;
+  }
+
+  // Make an authenticated GET request to the userinfo endpoint
+  cpr::Response r =
+      cpr::Get(cpr::Url{"https://www.googleapis.com/oauth2/v3/userinfo"},
+               cpr::Header{{"Authorization", "Bearer " + _access_token}});
+
+  if (r.status_code != 200) {
+    std::cerr << "Error fetching user info: " << r.text << std::endl;
+    return std::nullopt;
+  }
+
+  try {
+    json result = json::parse(r.text);
+    if (result.contains("email")) {
+      return result["email"];
+    }
+  } catch (const json::exception &e) {
+    std::cerr << "Error parsing user info response: " << e.what() << std::endl;
+  }
+
+  return std::nullopt; // Return empty if email wasn't found or parsing failed
 }
 
 } // namespace task_manager
