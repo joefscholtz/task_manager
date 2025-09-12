@@ -1,24 +1,27 @@
 #pragma once
 
+#include "GCalApiEvent.hpp"
+#include "GCalApiEventsList.hpp"
 #include "nlohmann/json.hpp"
 #include <optional>
 #include <string>
 #include <vector>
 
-struct ApiEvent {
-  std::string iCalUID;
-  std::string summary;
-  std::string start_time;
-  std::string end_time;
-};
+// struct ApiEvent {
+//   std::string iCalUID;
+//   std::string summary;
+//   std::string start_time;
+//   std::string end_time;
+// };
 
+namespace task_manager {
 class GoogleCalendarAPI {
 public:
   GoogleCalendarAPI(const std::string &secret_path);
 
   bool authenticate();
 
-  std::optional<std::vector<ApiEvent>> list_events(int max_results = 10);
+  std::optional<std::vector<GCalApiEvent>> list_events(int max_results = 100);
 
 private:
   bool load_secrets();
@@ -39,3 +42,5 @@ private:
   std::string _secret_file_path;
   const std::string _token_file_path = ".env/gcal_token.json";
 };
+
+} // namespace task_manager

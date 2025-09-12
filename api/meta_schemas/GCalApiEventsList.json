@@ -1,0 +1,18 @@
+{
+  "kind": "class",
+  "struct_name": "GCalApiEventsList",
+  "cpp_namespace": "task_manager",
+  "include_headers": ["string", "vector", "GCalApiEvent.hpp"],
+  "schema": {
+    "kind": { "type": "std::string" },
+    "etag": { "type": "std::string" },
+    "summary": { "type": "std::string" },
+    "description": { "type": "std::string" },
+    "updated": { "type": "std::string" },
+    "timeZone": { "type": "std::string" },
+    "accessRole": { "type": "std::string" },
+    "nextPageToken": { "type": "std::string" },
+    "nextSyncToken": { "type": "std::string" },
+    "items": { "type": "std::vector<task_manager::GCalApiEvent>" }
+  }
+}

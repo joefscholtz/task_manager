@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 
+namespace task_manager {
 using json = nlohmann::json;
 
 GoogleCalendarAPI::GoogleCalendarAPI(const std::string &secret_path)
@@ -147,7 +148,7 @@ std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
   return json::parse(r.text);
 }
 
-std::optional<std::vector<ApiEvent>>
+std::optional<std::vector<GCalApiEvent>>
 GoogleCalendarAPI::list_events(int max_results) {
   if (_access_token.empty() && !refresh_access_token()) {
     std::cout << "Authentication required. Please run the 'gcal_login' command."
@@ -169,16 +170,10 @@ GoogleCalendarAPI::list_events(int max_results) {
     return std::nullopt;
   }
 
-  std::vector<ApiEvent> events;
-  for (const auto &item : (*result_json)["items"]) {
-    ApiEvent ev;
-    ev.iCalUID = item.value("iCalUID", "");
-    ev.summary = item.value("summary", "No Title");
-    ev.start_time =
-        item["start"].value("dateTime", item["start"].value("date", ""));
-    ev.end_time = item["end"].value("dateTime", item["end"].value("date", ""));
-    events.push_back(ev);
-  }
+  std::vector<GCalApiEvent> events;
+  GCalApiEventsList events_list = result_json->get<GCalApiEventsList>();
+  events = events_list.items;
 
   return events;
 }
+} // namespace task_manager

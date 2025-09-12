@@ -1,4 +1,5 @@
 #pragma once
+#include "BaseApiEvent.hpp"
 #include "defines.hpp"
 #include "time.hpp"
 #include <optional>
@@ -31,6 +32,13 @@ public:
     return _iCalUID;
   }
   inline void set_iCalUID(const std::string &id) { _iCalUID = id; }
+
+  inline const BaseApiEvent &get_external_api_event() const {
+    return _external_api_event;
+  }
+  inline void set_external_api_event(const BaseApiEvent &api_event) {
+    _external_api_event = api_event;
+  }
 
   inline const std::string &get_name() const { return this->_name; }
   inline void set_name(const std::string &name) { this->_name = name; }
@@ -68,6 +76,7 @@ public:
 
   uint32_t _id;
   std::optional<std::string> _iCalUID;
+  BaseApiEvent _external_api_event;
   time_point _start, _end;
   std::string _name;
   std::string _description;

@@ -1,4 +1,6 @@
 #pragma once
+#include "GCalApiEvent.hpp"
+#include "GCalApiEventsList.hpp"
 #include "db.hpp"
 #include "defines.hpp"
 #include "event.hpp"
@@ -50,7 +52,7 @@ private:
   time_point _now = std::chrono::system_clock::now();
   std::unique_ptr<GoogleCalendarAPI> _gcal_api;
   // std::unordered_map<std::string, std::unique_ptr<GoogleCalendarAPI>>
-  // _gcal_apis;
+  //     _gcal_apis;
 };
 
 } // namespace task_manager

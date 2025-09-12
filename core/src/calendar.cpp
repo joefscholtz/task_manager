@@ -281,9 +281,11 @@ void Calendar::sync_external_events() {
     if (!exists) {
       Event new_event;
       new_event.set_name(api_event.summary);
-      new_event.set_start(parse_datetime(api_event.start_time));
-      new_event.set_end(parse_datetime(api_event.end_time));
+      new_event.set_start(parse_datetime(api_event.start.dateTime));
+      new_event.set_end(parse_datetime(api_event.end.dateTime));
+
       new_event.set_iCalUID(api_event.iCalUID); // Set the external ID
+      new_event.set_external_api_event(api_event);
 
       // Add to the in-memory list (as a shared_ptr)
       this->create_event(new_event);
