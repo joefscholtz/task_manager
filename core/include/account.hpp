@@ -1,13 +1,13 @@
 #pragma once
 #include "defines.hpp"
 #include "time.hpp"
-#include <string>
 
 namespace task_manager {
 
 class Account {
 public:
-  Account(std::string email, std::string refresh_token = "", uint32_t id = 0)
+  Account(std::string email = "", std::string refresh_token = "",
+          uint32_t id = 0)
       : _email(email), _refresh_token(refresh_token), _id(id) {}
 
   ~Account() = default;

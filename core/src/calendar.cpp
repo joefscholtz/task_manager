@@ -127,7 +127,22 @@ void Calendar::load_events_from_db() {
     this->load_event(ev, load_time_p);
   }
 }
-void Calendar::load_accounts_from_db() {}
+void Calendar::load_accounts_from_db() {
+  auto storage = this->get_storage();
+  storage.sync_schema();
+  if (storage.count<Account>() == 0) {
+
+    std::shared_ptr<Account> local_account = std::make_shared<Account>("local");
+    this->save_account_in_db(local_account);
+  }
+
+  auto db_accounts = storage.get_all<Account>();
+  this->_accounts.reserve(db_accounts.size());
+
+  for (auto db_account : db_accounts) {
+    _accounts.push_back(std::make_shared<Account>(db_account));
+  }
+}
 void Calendar::load_events() {
   this->load_events_from_db();
   this->load_accounts_from_db();
@@ -137,9 +152,11 @@ void Calendar::load_events() {
 bool Calendar::save_event_in_db(std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
+      // TODO: debug
+      std::cout << "inserting: \n" << *event_ptr << std::endl;
       auto updated_id = _storage.insert(*event_ptr);
       // TODO: debug
-      // std::cout << "updated_id: " << updated_id << std::endl;
+      std::cout << "updated_id: " << updated_id << std::endl;
       event_ptr->set_id(static_cast<uint32_t>(updated_id));
       return true;
     });
@@ -155,7 +172,7 @@ bool Calendar::save_account_in_db(std::shared_ptr<Account> &account_ptr) {
     _storage.transaction([&]() {
       auto updated_id = _storage.insert(*account_ptr);
       // TODO: debug
-      // std::cout << "updated_id: " << updated_id << std::endl;
+      std::cout << "updated_id: " << updated_id << std::endl;
       account_ptr->set_id(static_cast<uint32_t>(updated_id));
       return true;
     });

@@ -24,6 +24,9 @@ public:
   inline const std::vector<std::shared_ptr<Event>> get_events() const {
     return this->_all_events;
   }
+  inline const std::vector<std::shared_ptr<Account>> get_accounts() const {
+    return this->_accounts;
+  }
   inline Storage &get_storage() { return this->_storage; }
   inline const Storage &get_storage() const { return this->_storage; }
   bool

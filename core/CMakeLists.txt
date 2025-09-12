@@ -22,6 +22,7 @@
 
 add_executable(task_manager_cli
     src/cli.cpp
+    src/account.cpp
     src/calendar.cpp
     src/event.cpp
 )

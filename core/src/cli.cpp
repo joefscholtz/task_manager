@@ -62,6 +62,19 @@ int main() {
           std::cout << calendar;
         }
         std::cout << "------------------\n";
+        std::cout << "--- All accounts ---\n";
+        if (calendar.get_accounts().empty()) {
+          std::cout << "No events found. Use 'add' to create one.\n";
+        } else {
+          auto calendar_accounts = calendar.get_accounts();
+          for (size_t i = 0; i < calendar_accounts.size(); ++i) {
+            std::cout << *calendar_accounts[i];
+            if (i < calendar_accounts.size() - 1) {
+              std::cout << "--\n";
+            }
+          }
+        }
+        std::cout << "------------------\n";
 
       } else if (cmd == "add") {
         std::string name;

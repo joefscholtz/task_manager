@@ -2,7 +2,6 @@
 #include "BaseApiEvent.hpp"
 #include "defines.hpp"
 #include "time.hpp"
-#include <optional>
 
 namespace task_manager {
 
@@ -83,6 +82,6 @@ public:
   long long _start_db; // sqlite3 format for _start
   long long _end_db;   // sqlite3 format for _end
   bool _ongoing;
-  uint32_t _account_id;
+  std::optional<uint32_t> _account_id;
 };
 } // namespace task_manager

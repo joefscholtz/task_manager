@@ -165,7 +165,8 @@ GoogleCalendarAPI::list_events(int max_results,
       {{"maxResults", std::to_string(max_results)},
        {"orderBy", "startTime"},
        {"singleEvents", "true"},
-       {"timeMin", time_str}});
+       {"timeMin", time_str}},
+      refresh_token);
 
   if (!result_json) {
     return std::nullopt;
@@ -212,7 +213,8 @@ bool GoogleCalendarAPI::clear_account() {
   return true;
 }
 
-std::optional<std::string> GoogleCalendarAPI::get_user_email() {
+std::optional<std::string>
+GoogleCalendarAPI::get_user_email(const std::string &refresh_token) {
   if (_access_token.empty()) {
     std::cerr << "Cannot get user email: No access token available."
               << std::endl;
@@ -220,11 +222,18 @@ std::optional<std::string> GoogleCalendarAPI::get_user_email() {
   }
 
   // Make an authenticated GET request to the userinfo endpoint
+  auto result_json = make_authenticated_get_request(
+      "https://www.googleapis.com/oauth2/v3/userinfo",
+      {{"maxResults", std::to_string(max_results)},
+       {"orderBy", "startTime"},
+       {"singleEvents", "true"},
+       {"timeMin", time_str}});
+
   cpr::Response r =
       cpr::Get(cpr::Url{"https://www.googleapis.com/oauth2/v3/userinfo"},
                cpr::Header{{"Authorization", "Bearer " + _access_token}});
 
-  if (r.status_code != 200) {
+  if (result_json.status_code != 200) {
     std::cerr << "Error fetching user info: " << r.text << std::endl;
     return std::nullopt;
   }
