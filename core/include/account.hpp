@@ -23,12 +23,12 @@ public:
   }
 
   inline const std::string &get_email() const { return this->_email; }
-  inline std::string set_email(uint32_t email) { this->_email = email; }
+  inline void set_email(std::string email) { this->_email = email; }
 
   inline const std::string &get_refresh_token() const {
     return this->_refresh_token;
   }
-  inline std::string set_refresh_token(uint32_t refresh_token) {
+  inline void set_refresh_token(std::string refresh_token) {
     this->_refresh_token = refresh_token;
   }
 

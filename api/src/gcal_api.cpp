@@ -206,7 +206,7 @@ GoogleCalendarAPI::parse_gcal_event_datetime(const EventDateTime &event_dt) {
   return {}; // Return an empty/default time_point
 }
 
-void GoogleCalendarAPI::clear_account() {
+bool GoogleCalendarAPI::clear_account() {
   _access_token = std::string();
   _refresh_token = std::string();
   return true;

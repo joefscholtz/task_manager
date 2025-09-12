@@ -21,6 +21,8 @@ public:
 
   time_point parse_gcal_event_datetime(const EventDateTime &event_dt);
   std::optional<std::string> get_user_email();
+  bool clear_account();
+  inline std::string &get_refresh_token() { return this->_refresh_token; }
 
 private:
   bool load_secrets();
@@ -29,7 +31,6 @@ private:
   bool refresh_access_token(const std::string &refresh_token = std::string(),
                             const bool &override_refresh_token = true);
   bool get_tokens_from_auth_code(const std::string &auth_code);
-  bool clear_account();
 
   std::optional<nlohmann::json> make_authenticated_get_request(
       const std::string &url,
