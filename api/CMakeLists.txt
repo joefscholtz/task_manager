@@ -19,6 +19,7 @@ generate_class_from_json(api
   CONFIGS
   meta_schemas/GCalApiEvent.json
   meta_schemas/GCalApiEventsList.json
+  meta_schemas/GCalApiUserInfo.json
 )
 
 target_link_libraries(api PRIVATE shared_includes third_party cpr::cpr)

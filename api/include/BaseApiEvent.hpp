@@ -8,7 +8,9 @@ public:
   BaseApiEvent() {}
   virtual ~BaseApiEvent() = default;
 
-  AccountType get_account_type() const { return this->_account_type; }
+  inline const AccountType &get_account_type() const {
+    return this->_account_type;
+  }
 
 private:
   AccountType _account_type = AccountType::UNKNOWN;

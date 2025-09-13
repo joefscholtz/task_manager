@@ -153,10 +153,10 @@ bool Calendar::save_event_in_db(std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
       // TODO: debug
-      std::cout << "inserting: \n" << *event_ptr << std::endl;
+      // std::cout << "inserting: \n" << *event_ptr << std::endl;
       auto updated_id = _storage.insert(*event_ptr);
       // TODO: debug
-      std::cout << "updated_id: " << updated_id << std::endl;
+      // std::cout << "updated_id: " << updated_id << std::endl;
       event_ptr->set_id(static_cast<uint32_t>(updated_id));
       return true;
     });
@@ -172,7 +172,7 @@ bool Calendar::save_account_in_db(std::shared_ptr<Account> &account_ptr) {
     _storage.transaction([&]() {
       auto updated_id = _storage.insert(*account_ptr);
       // TODO: debug
-      std::cout << "updated_id: " << updated_id << std::endl;
+      // std::cout << "updated_id: " << updated_id << std::endl;
       account_ptr->set_id(static_cast<uint32_t>(updated_id));
       return true;
     });
@@ -308,6 +308,7 @@ bool Calendar::link_google_account(std::string client_secret_path) {
       std::shared_ptr<Account> gcal_account_ptr =
           std::make_shared<Account>(email);
       gcal_account_ptr->set_account_type(AccountType::GCAL);
+      gcal_account_ptr->set_user_info(this->_gcal_api->get_user_info());
       gcal_account_ptr->set_refresh_token(this->_gcal_api->get_refresh_token());
       this->_gcal_api->clear_account();
 
@@ -335,7 +336,6 @@ bool Calendar::sync_external_events() {
 
       std::optional<std::vector<GCalApiEvent>> fetched_events_opt =
           this->_gcal_api->list_events(500, account->get_refresh_token());
-      // Update refresh token in account bc it could be refreshed in the api
       account->set_refresh_token(this->_gcal_api->get_refresh_token());
       this->_gcal_api->clear_account();
 

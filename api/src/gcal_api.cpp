@@ -1,12 +1,12 @@
 #include "gcal_api.hpp"
 #include <chrono>
-#include <cpr/cpr.h>
 #include <format>
 #include <fstream>
 #include <iostream>
+#include <optional>
+#include <string>
 
 namespace task_manager {
-using json = nlohmann::json;
 
 GoogleCalendarAPI::GoogleCalendarAPI(const std::string &secret_path)
     : _secret_file_path(secret_path) {
@@ -119,33 +119,37 @@ bool GoogleCalendarAPI::refresh_access_token(
 }
 
 std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
-    const std::string &url,
-    const std::vector<std::pair<std::string, std::string>> &params,
-    const std::string &refresh_token) {
+    const std::string &url, std::optional<cpr::Parameters> params,
+    std::string refresh_token) {
+
   auto send_request = [&]() {
-    cpr::Parameters cpr_params;
-    for (const auto &p : params) {
-      cpr_params.Add({p.first, p.second});
-    }
+    cpr::Parameters cpr_params = params.value_or(cpr::Parameters{});
+
     return cpr::Get(cpr::Url{url}, cpr_params,
                     cpr::Header{{"Authorization", "Bearer " + _access_token}});
   };
 
   auto r = send_request();
-  if (r.status_code == 401) { // 401 Unauthorized, token likely expired
+
+  if (r.status_code == 401) {
     std::cout << "Access token expired. Attempting to refresh..." << std::endl;
     if (refresh_access_token(refresh_token)) {
-      r = send_request(); // Retry the request with the new token
+      r = send_request();
     }
   }
 
   if (r.status_code != 200) {
     std::cerr << "API request failed with status " << r.status_code << ": "
               << r.text << std::endl;
-    return std::nullopt;
+    return std::nullopt; // Return an empty optional on failure.
   }
 
-  return json::parse(r.text);
+  try {
+    return json::parse(r.text);
+  } catch (const json::exception &e) {
+    std::cerr << "Failed to parse JSON response: " << e.what() << std::endl;
+    return std::nullopt;
+  }
 }
 
 std::optional<std::vector<GCalApiEvent>>
@@ -162,11 +166,11 @@ GoogleCalendarAPI::list_events(int max_results,
 
   auto result_json = make_authenticated_get_request(
       "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-      {{"maxResults", std::to_string(max_results)},
-       {"orderBy", "startTime"},
-       {"singleEvents", "true"},
-       {"timeMin", time_str}},
-      refresh_token);
+      cpr::Parameters{{"maxResults", std::to_string(max_results)},
+                      {"orderBy", "startTime"},
+                      {"singleEvents", "true"},
+                      {"timeMin", time_str}},
+      this->_refresh_token);
 
   if (!result_json) {
     return std::nullopt;
@@ -210,44 +214,32 @@ GoogleCalendarAPI::parse_gcal_event_datetime(const EventDateTime &event_dt) {
 bool GoogleCalendarAPI::clear_account() {
   _access_token = std::string();
   _refresh_token = std::string();
+  _user_info = GCalApiUserInfo();
   return true;
 }
 
 std::optional<std::string>
 GoogleCalendarAPI::get_user_email(const std::string &refresh_token) {
-  if (_access_token.empty()) {
-    std::cerr << "Cannot get user email: No access token available."
-              << std::endl;
+  if (!refresh_access_token(refresh_token)) {
+    std::cout << "Authentication required. Please login again." << std::endl;
     return std::nullopt;
   }
-
-  // Make an authenticated GET request to the userinfo endpoint
   auto result_json = make_authenticated_get_request(
-      "https://www.googleapis.com/oauth2/v3/userinfo",
-      {{"maxResults", std::to_string(max_results)},
-       {"orderBy", "startTime"},
-       {"singleEvents", "true"},
-       {"timeMin", time_str}});
+      "https://www.googleapis.com/oauth2/v3/userinfo", std::nullopt,
+      this->_refresh_token);
 
-  cpr::Response r =
-      cpr::Get(cpr::Url{"https://www.googleapis.com/oauth2/v3/userinfo"},
-               cpr::Header{{"Authorization", "Bearer " + _access_token}});
-
-  if (result_json.status_code != 200) {
-    std::cerr << "Error fetching user info: " << r.text << std::endl;
+  if (!result_json) {
     return std::nullopt;
   }
 
   try {
-    json result = json::parse(r.text);
-    if (result.contains("email")) {
-      return result["email"];
-    }
+    GCalApiUserInfo user_info = result_json->get<GCalApiUserInfo>();
+    _user_info = user_info;
+    return user_info.email;
   } catch (const json::exception &e) {
     std::cerr << "Error parsing user info response: " << e.what() << std::endl;
+    return std::nullopt; // Return empty if email wasn't found or parsing failed
   }
-
-  return std::nullopt; // Return empty if email wasn't found or parsing failed
 }
 
 } // namespace task_manager

@@ -1,4 +1,5 @@
 #pragma once
+#include "BaseApiUserInfo.hpp"
 #include "defines.hpp"
 #include "time.hpp"
 
@@ -25,6 +26,13 @@ public:
   inline const std::string &get_email() const { return this->_email; }
   inline void set_email(std::string email) { this->_email = email; }
 
+  inline const BaseApiUserInfo &get_user_info() const {
+    return this->_user_info;
+  }
+  inline void set_user_info(BaseApiUserInfo user_info) {
+    this->_user_info = user_info;
+  }
+
   inline const std::string &get_refresh_token() const {
     return this->_refresh_token;
   }
@@ -36,6 +44,7 @@ public:
 
   uint32_t _id;
   AccountType _account_type = AccountType::UNKNOWN;
+  BaseApiUserInfo _user_info;
   std::string _email;
   std::string _refresh_token;
 };

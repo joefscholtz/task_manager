@@ -1,4 +1,6 @@
 #pragma once
+#include "nlohmann/json.hpp"
+#include <cpr/cpr.h>
 #include <cstdint>
 #include <filesystem>
 #include <format>
@@ -12,6 +14,8 @@
 #include <vector>
 
 namespace task_manager {
+
+using json = nlohmann::json;
 
 enum class AccountType { GCAL, UNKNOWN };
 

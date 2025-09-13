@@ -1,0 +1,20 @@
+{
+  "kind": "class",
+  "struct_name": "GCalApiUserInfo",
+  "cpp_namespace": "task_manager",
+  "is_final": true,
+  "base_classes": ["BaseApiUserInfo"],
+  "include_headers": ["string", "BaseApiUserInfo.hpp"],
+  "generate_constructor": "default",
+  "schema": {
+    "sub": "std::string",
+    "name": "std::string",
+    "given_name": "std::string",
+    "family_name": "std::string",
+    "picture": "std::string",
+    "email": "std::string",
+    "email_verified": "bool",
+    "locale": "std::string",
+    "hd": "std::string"
+  }
+}
