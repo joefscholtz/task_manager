@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <optional>
+#include <regex>
 #include <string>
 
 namespace task_manager {
@@ -21,8 +22,8 @@ bool GoogleCalendarAPI::load_secrets() {
     return false;
   }
   json secrets = json::parse(f);
-  _client_id = secrets["installed"]["client_id"];
-  _client_secret = secrets["installed"]["client_secret"];
+  this->_client_id = secrets["installed"]["client_id"];
+  this->_client_secret = secrets["installed"]["client_secret"];
   return true;
 }
 
@@ -48,8 +49,8 @@ bool GoogleCalendarAPI::get_tokens_from_auth_code(
     const std::string &auth_code) {
   cpr::Response r =
       cpr::Post(cpr::Url{"https://oauth2.googleapis.com/token"},
-                cpr::Payload{{"client_id", _client_id},
-                             {"client_secret", _client_secret},
+                cpr::Payload{{"client_id", this->_client_id},
+                             {"client_secret", this->_client_secret},
                              {"code", auth_code},
                              {"grant_type", "authorization_code"},
                              {"redirect_uri", "urn:ietf:wg:oauth:2.0:oob"}});
@@ -67,15 +68,21 @@ bool GoogleCalendarAPI::authenticate() {
   if (_client_id.empty())
     return false;
 
-  std::string scope = "https://www.googleapis.com/auth/calendar.events";
-  std::string auth_url = "https://accounts.google.com/o/oauth2/v2/auth?"
-                         "scope=" +
-                         scope +
-                         "&"
-                         "response_type=code&"
-                         "redirect_uri=urn:ietf:wg:oauth:2.0:oob&"
-                         "client_id=" +
-                         _client_id;
+  std::string calendar_scope =
+      "https://www.googleapis.com/auth/calendar.events";
+  std::string userinfo_scopes = "openid email profile";
+  std::string all_scopes = userinfo_scopes + " " + calendar_scope;
+  std::string encoded_scopes =
+      std::regex_replace(all_scopes, std::regex(" "), "%20");
+
+  std::string auth_url =
+      "https://accounts.google.com/o/oauth2/v2/auth?"
+      "scope=" +
+      encoded_scopes +
+      "&response_type=code"
+      "&redirect_uri=urn:ietf:wg:oauth:2.0:oob&client_id=" +
+      _client_id +
+      "&access_type=offline"; // Important for getting a refresh token
 
   std::cout << "Please go to this URL to authorize the application:\n"
             << auth_url << std::endl;
@@ -92,19 +99,23 @@ bool GoogleCalendarAPI::authenticate() {
 
 bool GoogleCalendarAPI::refresh_access_token(
     const std::string &refresh_token, const bool &override_refresh_token) {
-  if (!refresh_token.empty() && override_refresh_token)
-    _refresh_token = refresh_token;
+  if (!refresh_token.empty() && override_refresh_token) {
+    // TODO: debug
+    std::cout << "Using provided refresh_token" << refresh_token << std::endl;
+    this->_refresh_token = refresh_token;
+  }
 
-  if (_refresh_token.empty()) {
+  if (this->_refresh_token.empty()) {
     std::cerr << "No refresh token available. Please authenticate again."
               << std::endl;
     return false;
   }
-  cpr::Response r = cpr::Post(cpr::Url{"https://oauth2.googleapis.com/token"},
-                              cpr::Payload{{"client_id", _client_id},
-                                           {"client_secret", _client_secret},
-                                           {"refresh_token", _refresh_token},
-                                           {"grant_type", "refresh_token"}});
+  cpr::Response r =
+      cpr::Post(cpr::Url{"https://oauth2.googleapis.com/token"},
+                cpr::Payload{{"client_id", this->_client_id},
+                             {"client_secret", this->_client_secret},
+                             {"refresh_token", this->_refresh_token},
+                             {"grant_type", "refresh_token"}});
   if (r.status_code != 200) {
     std::cerr << "Error refreshing access token: " << r.text << std::endl;
     return false;
@@ -115,6 +126,8 @@ bool GoogleCalendarAPI::refresh_access_token(
     _refresh_token = result["refresh_token"];
   }
   std::cout << "Access token refreshed." << std::endl;
+  // TODO: debug
+  std::cout << refresh_token << std::endl;
   return true;
 }
 
@@ -125,15 +138,16 @@ std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
   auto send_request = [&]() {
     cpr::Parameters cpr_params = params.value_or(cpr::Parameters{});
 
-    return cpr::Get(cpr::Url{url}, cpr_params,
-                    cpr::Header{{"Authorization", "Bearer " + _access_token}});
+    return cpr::Get(
+        cpr::Url{url}, cpr_params,
+        cpr::Header{{"Authorization", "Bearer " + this->_access_token}});
   };
 
   auto r = send_request();
 
   if (r.status_code == 401) {
     std::cout << "Access token expired. Attempting to refresh..." << std::endl;
-    if (refresh_access_token(refresh_token)) {
+    if (refresh_access_token(refresh_token, true)) {
       r = send_request();
     }
   }
@@ -141,7 +155,7 @@ std::optional<json> GoogleCalendarAPI::make_authenticated_get_request(
   if (r.status_code != 200) {
     std::cerr << "API request failed with status " << r.status_code << ": "
               << r.text << std::endl;
-    return std::nullopt; // Return an empty optional on failure.
+    return std::nullopt;
   }
 
   try {

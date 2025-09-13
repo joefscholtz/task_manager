@@ -22,3 +22,4 @@ run:
 
 remove-db:
   rm ~/.local/share/task_manager/task_manager.sqlite3
+  rm .env/gcal_token.json

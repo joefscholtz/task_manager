@@ -291,29 +291,31 @@ std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
 bool Calendar::link_google_account(std::string client_secret_path) {
   std::string email;
   this->_gcal_api = std::make_unique<GoogleCalendarAPI>(client_secret_path);
-  if (this->_gcal_api) {
-    if (!this->_gcal_api->authenticate()) {
-      std::cout << "Failed to authenticate" << std::endl;
-      return false;
+  if (!this->_gcal_api) {
+    std::cout << "Failed to create GoogleCalendarAPI object" << std::endl;
+    return false;
+  }
+  if (!this->_gcal_api->authenticate()) {
+    std::cout << "Failed to authenticate" << std::endl;
+    return false;
+  } else {
+    auto email_opt = this->_gcal_api->get_user_email();
+    if (email_opt) {
+      email = *email_opt;
+      std::cout << "Successfully authenticated as: " << email << std::endl;
     } else {
-      auto email_opt = this->_gcal_api->get_user_email();
-      if (email_opt) {
-        email = *email_opt;
-        std::cout << "Successfully authenticated as: " << email << std::endl;
-      } else {
-        std::cerr << "Could not retrieve email for the new account."
-                  << std::endl;
-        return false;
-      }
-      std::shared_ptr<Account> gcal_account_ptr =
-          std::make_shared<Account>(email);
-      gcal_account_ptr->set_account_type(AccountType::GCAL);
-      gcal_account_ptr->set_user_info(this->_gcal_api->get_user_info());
-      gcal_account_ptr->set_refresh_token(this->_gcal_api->get_refresh_token());
-      this->_gcal_api->clear_account();
-
-      _accounts.push_back(gcal_account_ptr);
+      std::cerr << "Could not retrieve email for the new account." << std::endl;
+      return false;
     }
+    std::shared_ptr<Account> gcal_account_ptr =
+        std::make_shared<Account>(email);
+    gcal_account_ptr->set_account_type(AccountType::GCAL);
+    gcal_account_ptr->set_user_info(this->_gcal_api->get_user_info());
+    gcal_account_ptr->set_refresh_token(this->_gcal_api->get_refresh_token());
+    this->_gcal_api->clear_account();
+
+    _accounts.push_back(gcal_account_ptr);
+    return true;
   }
 }
 
@@ -350,23 +352,36 @@ bool Calendar::sync_external_events() {
         all_external_events.push_back(
             std::make_unique<GCalApiEvent>(std::move(event)));
       }
+    } else if (account->get_account_type() == AccountType::UNKNOWN) {
+      // TODO: debug
+      std::cout << "Account has unknown account_type" << std::endl;
+
+    } else {
+      // TODO: debug
+      std::cout << "Account has wrong account_type" << std::endl;
     }
   }
 
-  std::cout << "\nTotal events fetched: " << all_external_events.size()
+  std::cout << "\nTotal ApiEvents fetched: " << all_external_events.size()
             << std::endl;
 
-  // Iterate through the aggregated list of all events from all accounts
   for (const auto &event_ptr : all_external_events) {
-    if (event_ptr->get_account_type() != AccountType::GCAL) {
+    if (event_ptr->get_account_type() == AccountType::UNKNOWN) {
+      // TODO: debug
+      std::cout << "ApiEvent has unknown account_type" << std::endl;
+      continue;
+    } else if (event_ptr->get_account_type() != AccountType::GCAL) {
+      // TODO: debug
+      std::cout << "ApiEvent has wrong account_type" << std::endl;
       continue;
     }
 
     const GCalApiEvent *api_event_ptr =
         dynamic_cast<const GCalApiEvent *>(event_ptr.get());
     if (!api_event_ptr) {
-      std::cerr << "Error: Event type is GCAL but dynamic_cast failed."
-                << std::endl;
+      std::cerr
+          << "Error: ApiEvent type is GCalApiEvent but dynamic_cast failed."
+          << std::endl;
       sync_success = false;
       continue;
     }
@@ -378,6 +393,7 @@ bool Calendar::sync_external_events() {
       if (existing_event->get_iCalUID() == api_event.iCalUID) {
         exists = true;
         // TODO: update_event(existing_event, api_event);
+        std::cerr << "ApiEvent should be updated!" << std::endl;
         break;
       }
     }

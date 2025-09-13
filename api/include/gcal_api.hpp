@@ -20,7 +20,7 @@ public:
 
   time_point parse_gcal_event_datetime(const EventDateTime &event_dt);
   std::optional<std::string>
-  get_user_email(const std::string &refresh_token = std::string(""));
+  get_user_email(const std::string &refresh_token = std::string());
 
   inline GCalApiUserInfo const &get_user_info() { return this->_user_info; }
 
