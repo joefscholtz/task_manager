@@ -40,6 +40,13 @@ public:
     this->_iCalUID = iCalUID;
   }
 
+  inline void set_recurring_event_id(const std::string &recurring_event_id) {
+    this->_recurring_event_id = recurring_event_id;
+  }
+  inline const std::optional<std::string> &get_recurring_event_id() const {
+    return this->_recurring_event_id;
+  }
+
   inline const std::optional<std::string> &get_etag() const {
     return this->_etag;
   }
@@ -97,7 +104,10 @@ public:
   uint32_t _id;
   std::optional<std::string> _iCalUID;
   std::optional<std::string> _etag;
+  std::optional<std::string> _recurring_event_id;
   std::shared_ptr<BaseApiEvent> _external_api_event_ptr;
+  std::vector<std::shared_ptr<BaseApiEvent>> _external_api_recurring_events_ptr;
+  bool _store_recurring_events = true;
   AccountType _external_account_type = AccountType::NOT_INHERITED;
   time_point _start, _end;
   std::string _name;

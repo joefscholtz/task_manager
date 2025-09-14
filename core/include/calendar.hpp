@@ -49,6 +49,9 @@ public:
   bool link_google_account();
   bool sync_external_events();
 
+  bool check_account_api(const std::shared_ptr<Account> &account);
+  bool nuke_n_pave(std::shared_ptr<Account> &account);
+
 private:
   bool load_event(Event &event,
                   const time_point &time_p = std::chrono::system_clock::now());
@@ -58,6 +61,7 @@ private:
   void load_events();
   bool save_event_in_db(std::shared_ptr<Event> &event_ptr);
   bool save_account_in_db(std::shared_ptr<Account> &account_ptr);
+  bool update_account_in_db(std::shared_ptr<Account> &account_ptr);
   bool update_event_in_db(const std::shared_ptr<Event> &event_ptr);
   bool remove_event_from_db(std::shared_ptr<Event> &event_ptr);
   std::vector<std::shared_ptr<Event>> _past_events, _ongoing_events,
