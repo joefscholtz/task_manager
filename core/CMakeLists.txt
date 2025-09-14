@@ -22,6 +22,7 @@
 
 add_executable(task_manager_cli
     src/cli.cpp
+    src/account.cpp
     src/calendar.cpp
     src/event.cpp
 )
@@ -31,4 +32,4 @@ target_include_directories(task_manager_cli
 )
 
 # target_link_libraries(task_manager_cli PRIVATE third_party)
-target_link_libraries(task_manager_cli PRIVATE third_party api)
+target_link_libraries(task_manager_cli PRIVATE shared_includes third_party api)

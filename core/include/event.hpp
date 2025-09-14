@@ -1,12 +1,15 @@
 #pragma once
 #include "defines.hpp"
 #include "time.hpp"
-#include <optional>
+
+#include "BaseApiEvent.hpp"
 
 namespace task_manager {
 
 class Event {
 public:
+  // Since we manage a resource (shared_ptr), it's good practice to define
+  // the "Rule of Five" special member functions, even if they are defaulted.
   Event(const std::string &name = "", const time_point &start = {},
         const time_point &end = {}, const uint32_t id = 0)
       : _name(name), _id(id) {
@@ -14,23 +17,48 @@ public:
     set_end(end);
     _ongoing = false;
   }
-
   ~Event() = default;
+  Event(const Event &other) = default;
+  Event &operator=(const Event &other) = default;
+  Event(Event &&other) noexcept = default;
+  Event &operator=(Event &&other) noexcept = default;
 
   // This new method will synchronize your time_point members
   // after the ORM populates the _start_db and _end_db members.
   void update_members_from_db() {
-    _start = time_point(std::chrono::microseconds(_start_db));
-    _end = time_point(std::chrono::microseconds(_end_db));
+    this->_start = time_point(std::chrono::microseconds(_start_db));
+    this->_end = time_point(std::chrono::microseconds(_end_db));
   }
 
   inline const uint32_t &get_id() const { return this->_id; }
   inline void set_id(uint32_t id) { this->_id = id; }
 
   inline const std::optional<std::string> &get_iCalUID() const {
-    return _iCalUID;
+    return this->_iCalUID;
   }
-  inline void set_iCalUID(const std::string &id) { _iCalUID = id; }
+  inline void set_iCalUID(const std::string &iCalUID) {
+    this->_iCalUID = iCalUID;
+  }
+
+  inline const std::optional<std::string> &get_etag() const {
+    return this->_etag;
+  }
+  inline void set_etag(const std::string &etag) { this->_etag = etag; }
+
+  const std::shared_ptr<BaseApiEvent> get_external_api_event_ptr() const {
+    return this->_external_api_event_ptr;
+  }
+
+  inline void
+  set_external_api_event_ptr(std::shared_ptr<BaseApiEvent> api_event_ptr) {
+    this->_external_api_event_ptr = api_event_ptr;
+    if (this->_external_api_event_ptr) {
+      this->_external_account_type = api_event_ptr->get_account_type();
+    }
+  }
+  inline void set_external_api_event_ptr(const BaseApiEvent &api_event) {
+    set_external_api_event_ptr(std::make_shared<BaseApiEvent>(api_event));
+  }
 
   inline const std::string &get_name() const { return this->_name; }
   inline void set_name(const std::string &name) { this->_name = name; }
@@ -68,11 +96,15 @@ public:
 
   uint32_t _id;
   std::optional<std::string> _iCalUID;
+  std::optional<std::string> _etag;
+  std::shared_ptr<BaseApiEvent> _external_api_event_ptr;
+  AccountType _external_account_type = AccountType::NOT_INHERITED;
   time_point _start, _end;
   std::string _name;
   std::string _description;
   long long _start_db; // sqlite3 format for _start
   long long _end_db;   // sqlite3 format for _end
   bool _ongoing;
+  std::optional<uint32_t> _account_id;
 };
 } // namespace task_manager

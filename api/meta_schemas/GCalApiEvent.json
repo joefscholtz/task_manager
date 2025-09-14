@@ -1,0 +1,132 @@
+{
+  "kind": "class",
+  "struct_name": "GCalApiEvent",
+  "cpp_namespace": "task_manager",
+  "is_final": true,
+  "base_classes": ["BaseApiEvent"],
+  "include_headers": ["string", "vector", "BaseApiEvent.hpp"],
+  "generate_constructor": "default",
+  "generate_clone_method": false,
+  "base_constructor_args": {
+    "BaseApiEvent": "AccountType::GCAL"
+  },
+  "schema": {
+    "kind": "std::string",
+    "etag": "std::string",
+    "id": "std::string",
+    "status": "std::string",
+    "htmlLink": { "type": "std::string" },
+    "created": { "type": "std::string" },
+    "updated": { "type": "std::string" },
+    "summary": { "type": "std::string" },
+    "description": { "type": "std::string" },
+    "location": { "type": "std::string" },
+    "colorId": { "type": "std::string" },
+    "creator": {
+      "type": "Contact",
+      "schema": {
+        "struct_name": "Contact",
+        "schema": {
+          "id": { "type": "std::string" },
+          "email": { "type": "std::string" },
+          "displayName": { "type": "std::string" },
+          "self": { "type": "bool" }
+        }
+      }
+    },
+    "organizer": { "type": "Contact" },
+    "start": {
+      "type": "EventDateTime",
+      "schema": {
+        "struct_name": "EventDateTime",
+        "schema": {
+          "date": { "type": "std::string" },
+          "dateTime": { "type": "std::string" },
+          "timeZone": { "type": "std::string" }
+        }
+      }
+    },
+    "end": { "type": "EventDateTime" },
+    "endTimeUnspecified": { "type": "bool" },
+    "recurrence": { "type": "std::vector<std::string>" },
+    "recurringEventId": { "type": "std::string" },
+    "originalStartTime": { "type": "EventDateTime" },
+    "transparency": { "type": "std::string" },
+    "visibility": { "type": "std::string" },
+    "iCalUID": { "type": "std::string" },
+    "sequence": { "type": "int" },
+    "attendees": {
+      "type": "std::vector<EventAttendee>",
+      "schema": {
+        "struct_name": "EventAttendee",
+        "schema": {
+          "id": { "type": "std::string" },
+          "email": { "type": "std::string" },
+          "displayName": { "type": "std::string" },
+          "organizer": { "type": "bool" },
+          "self": { "type": "bool" },
+          "resource": { "type": "bool" },
+          "optional": { "type": "bool" },
+          "responseStatus": { "type": "std::string" },
+          "comment": { "type": "std::string" },
+          "additionalGuests": { "type": "int" }
+        }
+      }
+    },
+    "attendeesOmitted": { "type": "bool" },
+    "extendedProperties": {
+      "type": "ExtendedProperties",
+      "schema": {
+        "struct_name": "ExtendedProperties",
+        "schema": {
+          "private_": { "type": "std::map<std::string, std::string>" },
+          "shared": { "type": "std::map<std::string, std::string>" }
+        }
+      }
+    },
+    "hangoutLink": { "type": "std::string" },
+    "reminders": {
+      "type": "EventReminders",
+      "schema": {
+        "struct_name": "EventReminders",
+        "schema": {
+          "useDefault": { "type": "bool" },
+          "overrides": {
+            "type": "std::vector<ReminderOverride>",
+            "schema": {
+              "struct_name": "ReminderOverride",
+              "schema": {
+                "method": { "type": "std::string" },
+                "minutes": { "type": "int" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "Source",
+      "schema": {
+        "struct_name": "Source",
+        "schema": {
+          "url": { "type": "std::string" },
+          "title": { "type": "std::string" }
+        }
+      }
+    },
+    "attachments": {
+      "type": "std::vector<EventAttachment>",
+      "schema": {
+        "struct_name": "EventAttachment",
+        "schema": {
+          "fileUrl": { "type": "std::string" },
+          "title": { "type": "std::string" },
+          "mimeType": { "type": "std::string" },
+          "iconLink": { "type": "std::string" },
+          "fileId": { "type": "std::string" }
+        }
+      }
+    },
+    "eventType": { "type": "std::string" }
+  }
+}

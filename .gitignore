@@ -1,7 +1,4 @@
 **/build/
 **.log
-3rd_party/json
-3rd_party/replxx
-3rd_party/sqlite_orm
 **history*
 .env/
