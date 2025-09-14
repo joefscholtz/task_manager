@@ -1,6 +1,7 @@
 #pragma once
-#include "BaseApiUserInfo.hpp"
 #include "defines.hpp"
+
+#include "BaseApiUserInfo.hpp"
 #include "time.hpp"
 
 namespace task_manager {

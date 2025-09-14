@@ -1,8 +1,8 @@
 #pragma once
-#include "BaseApiEvent.hpp"
 #include "defines.hpp"
 #include "time.hpp"
-#include <memory>
+
+#include "BaseApiEvent.hpp"
 
 namespace task_manager {
 

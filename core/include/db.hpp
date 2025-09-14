@@ -1,6 +1,7 @@
 #pragma once
-#include "account.hpp"
 #include "defines.hpp"
+
+#include "account.hpp"
 #include "event.hpp"
 #include "sqlite_orm/sqlite_orm.h"
 
