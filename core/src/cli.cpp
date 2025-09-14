@@ -64,7 +64,8 @@ int main() {
         std::cout << "------------------\n";
         std::cout << "--- All accounts ---\n";
         if (calendar.get_accounts().empty()) {
-          std::cout << "No events found. Use 'add' to create one.\n";
+          std::cout << "No accounts found. Use 'link_<account_type>' to create "
+                       "one.\n";
         } else {
           auto calendar_accounts = calendar.get_accounts();
           for (size_t i = 0; i < calendar_accounts.size(); ++i) {

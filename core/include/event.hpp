@@ -26,8 +26,8 @@ public:
   // This new method will synchronize your time_point members
   // after the ORM populates the _start_db and _end_db members.
   void update_members_from_db() {
-    _start = time_point(std::chrono::microseconds(_start_db));
-    _end = time_point(std::chrono::microseconds(_end_db));
+    this->_start = time_point(std::chrono::microseconds(_start_db));
+    this->_end = time_point(std::chrono::microseconds(_end_db));
   }
 
   inline const uint32_t &get_id() const { return this->_id; }

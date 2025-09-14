@@ -34,6 +34,7 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
           "accounts",
           make_column("id", &Account::_id, primary_key().autoincrement()),
           make_column("email", &Account::_email, unique()),
+          make_column("account_type", &Account::_account_type_db),
           make_column("refresh_token", &Account::_refresh_token)));
 }
 

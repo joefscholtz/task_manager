@@ -19,8 +19,12 @@ public:
   inline const AccountType &get_account_type() const {
     return this->_account_type;
   }
+  inline const int &get_account_type_db() const {
+    return this->_account_type_db;
+  }
   inline void set_account_type(AccountType account_type) {
     this->_account_type = account_type;
+    this->_account_type_db = static_cast<int>(account_type);
   }
 
   inline const std::string &get_email() const { return this->_email; }
@@ -40,10 +44,17 @@ public:
     this->_refresh_token = refresh_token;
   }
 
+  // This new method will synchronize your AccountType member
+  // after the ORM populates the _start_db and _end_db members.
+  void update_members_from_db() {
+    this->_account_type = static_cast<AccountType>(this->_account_type_db);
+  }
+
   friend std::ostream &operator<<(std::ostream &os, const Account &account);
 
   uint32_t _id;
   AccountType _account_type = AccountType::UNKNOWN;
+  int _account_type_db = static_cast<int>(AccountType::UNKNOWN);
   BaseApiUserInfo _user_info;
   std::string _email;
   std::string _refresh_token;

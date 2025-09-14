@@ -1,12 +1,16 @@
 #pragma once
+#include "defines.hpp"
+#include "time.hpp"
+
 #include "GCalApiEvent.hpp"
 #include "GCalApiEventsList.hpp"
 #include "account.hpp"
-#include "db.hpp"
-#include "defines.hpp"
 #include "event.hpp"
 #include "gcal_api.hpp"
-#include "time.hpp"
+
+#include "db.hpp"
+
+// #include "sqlite_orm_type_mapping.hpp"
 
 namespace task_manager {
 
@@ -14,7 +18,7 @@ class Calendar {
 public:
   using Storage = decltype(init_storage());
 
-  Calendar() : _storage(init_storage()) { load_events_from_db(); }
+  Calendar() : _storage(init_storage()) { load_events(); }
   ~Calendar() = default;
 
   int tick();
@@ -45,6 +49,7 @@ public:
 private:
   bool load_event(Event &event,
                   const time_point &time_p = std::chrono::system_clock::now());
+  bool load_account(Account &account);
   void load_events_from_db();
   void load_accounts_from_db();
   void load_events();

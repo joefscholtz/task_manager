@@ -85,8 +85,16 @@ bool Calendar::update_ongoing_events(bool clear, const time_point &time_p) {
 
   return true;
 }
+bool Calendar::load_account(Account &account) {
+  account.update_members_from_db();
+  auto account_ptr = std::make_shared<Account>(account);
+
+  this->_accounts.push_back(account_ptr);
+  return true;
+}
 
 bool Calendar::load_event(Event &event, const time_point &time_p) {
+  event.update_members_from_db();
   auto event_ptr = std::make_shared<Event>(event);
 
   this->_all_events.push_back(event_ptr);
@@ -102,6 +110,9 @@ bool Calendar::load_event(Event &event, const time_point &time_p) {
 }
 
 void Calendar::load_events_from_db() {
+  // TODO: debug
+  std::cout << "load_events_from_db" << std::endl;
+
   auto load_time_p = std::chrono::system_clock::now();
   auto storage = this->get_storage();
   // TODO: use log library
@@ -127,25 +138,46 @@ void Calendar::load_events_from_db() {
     this->load_event(ev, load_time_p);
   }
 }
+
 void Calendar::load_accounts_from_db() {
+  // TODO: debug
+  std::cout << "load_accounts_from_db" << std::endl;
   auto storage = this->get_storage();
   storage.sync_schema();
+  // TODO: debug
+  std::cout << "synced schema in load_accounts_from_db" << std::endl;
   if (storage.count<Account>() == 0) {
-
-    std::shared_ptr<Account> local_account = std::make_shared<Account>("local");
-    this->save_account_in_db(local_account);
+    // TODO: debug
+    std::cout << "storage has no local account, creating.." << std::endl;
+    std::shared_ptr<Account> local_account_ptr =
+        std::make_shared<Account>("local");
+    local_account_ptr->set_account_type(AccountType::LOCAL);
+    if (this->save_account_in_db(local_account_ptr)) {
+      // TODO: debug
+      std::cout << "local account created" << std::endl;
+    } else {
+      // TODO: debug
+      std::cout << "error saving local account in db" << std::endl;
+    }
+  } else {
+    // TODO: debug
+    std::cout << "storage already had accounts" << std::endl;
   }
 
+  // TODO: debug
+  std::cout << "updating calendar accounts from db" << std::endl;
   auto db_accounts = storage.get_all<Account>();
   this->_accounts.reserve(db_accounts.size());
-
   for (auto db_account : db_accounts) {
-    _accounts.push_back(std::make_shared<Account>(db_account));
+    db_account.update_members_from_db();
+    this->load_account(db_account);
   }
 }
 void Calendar::load_events() {
-  this->load_events_from_db();
+  // TODO: debug
+  std::cout << "load_events" << std::endl;
   this->load_accounts_from_db();
+  this->load_events_from_db();
   this->sync_external_events();
 }
 
@@ -315,16 +347,24 @@ bool Calendar::link_google_account(std::string client_secret_path) {
     this->_gcal_api->clear_account();
 
     this->_accounts.push_back(gcal_account_ptr);
+    this->save_account_in_db(gcal_account_ptr);
+
     return true;
   }
 }
 
 bool Calendar::sync_external_events() {
+  // TODO: debug
+  std::cout << "sync_external_events" << std::endl;
+
   bool sync_success = true;
   std::vector<std::shared_ptr<BaseApiEvent>> all_external_api_event_ptrs;
 
   // Iterate through all linked accounts to fetch their events
   for (const auto &account : this->_accounts) {
+    if (account->get_account_type() == AccountType::LOCAL)
+      continue;
+
     if (account->get_account_type() == AccountType::GCAL) {
       if (!this->_gcal_api) {
         std::cerr << "Error: Google Calendar API is not initialized."
@@ -352,13 +392,20 @@ bool Calendar::sync_external_events() {
         all_external_api_event_ptrs.push_back(
             std::make_shared<GCalApiEvent>(std::move(event)));
       }
+    } else if (account->get_account_type() == AccountType::NOT_INHERITED) {
+      // TODO: debug
+      std::cout << "Account didn't inherited AccountType" << std::endl;
+      continue;
+
     } else if (account->get_account_type() == AccountType::UNKNOWN) {
       // TODO: debug
       std::cout << "Account has unknown account_type" << std::endl;
+      continue;
 
     } else {
       // TODO: debug
       std::cout << "Account has wrong account_type" << std::endl;
+      continue;
     }
   }
 
@@ -369,6 +416,17 @@ bool Calendar::sync_external_events() {
     if (api_event_ptr->get_account_type() == AccountType::UNKNOWN) {
       // TODO: debug
       std::cout << "ApiEvent has unknown account_type" << std::endl;
+      continue;
+    } else if (api_event_ptr->get_account_type() ==
+               AccountType::NOT_INHERITED) {
+      // TODO: debug
+      std::cout << "ApiEvent didn't inherited AccountType" << std::endl;
+      continue;
+    } else if (api_event_ptr->get_account_type() == AccountType::LOCAL) {
+      // TODO: debug
+      std::cout << "ApiEvent AccountType is LOCAL but it should've been "
+                   "filtered already"
+                << std::endl;
       continue;
     } else if (api_event_ptr->get_account_type() != AccountType::GCAL) {
       // TODO: debug

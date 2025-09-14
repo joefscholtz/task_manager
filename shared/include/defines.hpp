@@ -23,7 +23,7 @@ using json = nlohmann::json;
 //
 // UNKNOWN: when its a class member: the class instance is yet to be casted from
 // BaseApiObjectClass to <AccountType>ApiObjectClass
-enum class AccountType { GCAL, UNKNOWN, NOT_INHERITED };
+enum class AccountType { LOCAL = 0, UNKNOWN = 1, NOT_INHERITED = 2, GCAL = 3 };
 
 inline const std::string account_type_to_string(AccountType type) {
   switch (type) {
