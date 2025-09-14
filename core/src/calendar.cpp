@@ -1,6 +1,4 @@
 #include "calendar.hpp"
-#include "db.hpp"
-#include <memory>
 
 namespace task_manager {
 
