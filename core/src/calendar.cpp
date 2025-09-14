@@ -230,7 +230,7 @@ bool Calendar::create_event(Event &event, const time_point &time_p) {
   return true;
 }
 
-bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
+bool Calendar::update_event_in_db(const std::shared_ptr<Event> &event_ptr) {
   try {
     _storage.transaction([&]() {
       _storage.update(*event_ptr);
@@ -246,14 +246,14 @@ bool Calendar::update_event_in_db(std::shared_ptr<Event> &event_ptr) {
   }
 }
 
-bool Calendar::update_event_by_id(uint32_t id, const std::string &name,
+bool Calendar::update_event_by_id(const uint32_t id, const std::string &name,
                                   const std::string &desc) {
-  auto it = std::find_if(_all_events.begin(), _all_events.end(),
+  auto it = std::find_if(this->_all_events.begin(), this->_all_events.end(),
                          [id](const auto &e) { return e->get_id() == id; });
-  if (it == _all_events.end())
+  if (it == this->_all_events.end())
     return false;
 
-  auto event_ptr = *it;
+  const auto event_ptr = *it;
   if (!name.empty())
     event_ptr->set_name(name);
   if (!desc.empty())
@@ -318,13 +318,8 @@ std::ostream &operator<<(std::ostream &os, const Calendar &calendar) {
   return os;
 }
 
-bool Calendar::link_google_account(std::string client_secret_path) {
+bool Calendar::link_google_account() {
   std::string email;
-  this->_gcal_api = std::make_unique<GoogleCalendarAPI>(client_secret_path);
-  if (!this->_gcal_api) {
-    std::cout << "Failed to create GoogleCalendarAPI object" << std::endl;
-    return false;
-  }
   if (!this->_gcal_api->authenticate()) {
     std::cout << "Failed to authenticate" << std::endl;
     return false;
@@ -445,19 +440,39 @@ bool Calendar::sync_external_events() {
     const GCalApiEvent &gcal_api_event = *gcal_api_event_ptr;
 
     bool exists = false;
-    for (const auto &existing_event : _all_events) {
-      if (existing_event->get_iCalUID() == gcal_api_event.iCalUID) {
+    for (const auto &existing_event_ptr : this->_all_events) {
+      if (existing_event_ptr->get_iCalUID() == gcal_api_event.iCalUID) {
         auto external_api_event_base_ptr =
-            existing_event->get_external_api_event_ptr();
+            existing_event_ptr->get_external_api_event_ptr();
 
         if (!external_api_event_base_ptr) {
           // TODO: should I fill it then??
-          std::cerr
-              << "Error: external_api_event_base_ptr is null: existing_event "
-                 "doesnt have an external_api_event. Should it be filled?"
-              << std::endl;
-          sync_success = false;
-          continue;
+          // I have to check if it happens in any case other resyncing
+          if (existing_event_ptr->get_etag() == gcal_api_event.etag) {
+            existing_event_ptr->set_external_api_event_ptr(api_event_ptr);
+            std::cerr << "Error: external_api_event_base_ptr is null: "
+                         "existing_event_ptr "
+                         "doesnt have an external_api_event. Filling, but "
+                         "should it be "
+                         "filled?"
+                      << std::endl;
+
+            external_api_event_base_ptr =
+                existing_event_ptr->get_external_api_event_ptr();
+          } else {
+            std::cout << "existing_event_ptr->get_iCalUID() == "
+                         "gcal_api_event.iCalUID but "
+                         "existing_event_ptr->get_etag() != gcal_api_event.etag"
+                      << std::endl;
+          }
+          if (!external_api_event_base_ptr) {
+            std::cerr << "Fatal Error: external_api_event_base_ptr is even "
+                         "after trying to use api_event_ptr"
+                      << std::endl;
+            sync_success = false;
+            // TODO: should I skip?
+            // continue;
+          }
         }
 
         const auto existing_gcal_api_event_ptr =
@@ -476,9 +491,10 @@ bool Calendar::sync_external_events() {
             *existing_gcal_api_event_ptr;
 
         if (gcal_api_event.etag != existing_gcal_api_event.etag) {
-          // TODO: update_event(existing_event, gcal_api_event);
-          // this->update_event_by_id(existing_event->get_id());
+          // TODO: check if update_event works
           std::cerr << "ApiEvent should be updated!" << std::endl;
+          this->update_event_in_db(existing_event_ptr);
+          std::cerr << "ApiEvent updated!" << std::endl;
         } else {
           // TODO: recurring_events
           std::cerr << "Recurring event found" << std::endl;
@@ -496,6 +512,7 @@ bool Calendar::sync_external_events() {
       new_event.set_end(
           this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
       new_event.set_iCalUID(gcal_api_event.iCalUID);
+      new_event.set_etag(gcal_api_event.etag);
       new_event.set_external_api_event_ptr(api_event_ptr);
 
       this->create_event(new_event);

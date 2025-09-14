@@ -34,9 +34,16 @@ public:
   inline void set_id(uint32_t id) { this->_id = id; }
 
   inline const std::optional<std::string> &get_iCalUID() const {
-    return _iCalUID;
+    return this->_iCalUID;
   }
-  inline void set_iCalUID(const std::string &id) { _iCalUID = id; }
+  inline void set_iCalUID(const std::string &iCalUID) {
+    this->_iCalUID = iCalUID;
+  }
+
+  inline const std::optional<std::string> &get_etag() const {
+    return this->_etag;
+  }
+  inline void set_etag(const std::string &etag) { this->_etag = etag; }
 
   const std::shared_ptr<BaseApiEvent> get_external_api_event_ptr() const {
     return this->_external_api_event_ptr;
@@ -89,6 +96,7 @@ public:
 
   uint32_t _id;
   std::optional<std::string> _iCalUID;
+  std::optional<std::string> _etag;
   std::shared_ptr<BaseApiEvent> _external_api_event_ptr;
   AccountType _external_account_type = AccountType::NOT_INHERITED;
   time_point _start, _end;

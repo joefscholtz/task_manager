@@ -15,7 +15,14 @@ class Calendar {
 public:
   using Storage = decltype(init_storage());
 
-  Calendar() : _storage(init_storage()) { load_events(); }
+  Calendar() : _storage(init_storage()) {
+    this->_gcal_api =
+        std::make_unique<GoogleCalendarAPI>(this->_client_secret_path);
+    if (!this->_gcal_api) {
+      std::cout << "Failed to create GoogleCalendarAPI object" << std::endl;
+    }
+    load_events();
+  }
   ~Calendar() = default;
 
   int tick();
@@ -33,14 +40,13 @@ public:
   bool
   create_event(Event &event,
                const time_point &time_p = std::chrono::system_clock::now());
-  bool update_event_by_id(uint32_t id, const std::string &name,
+  bool update_event_by_id(const uint32_t id, const std::string &name,
                           const std::string &desc);
   bool remove_event_by_id(u_int32_t id);
 
   friend std::ostream &operator<<(std::ostream &os, const Calendar &calendar);
 
-  bool link_google_account(
-      std::string client_secret_path = std::string(".env/client_secret.json"));
+  bool link_google_account();
   bool sync_external_events();
 
 private:
@@ -52,13 +58,15 @@ private:
   void load_events();
   bool save_event_in_db(std::shared_ptr<Event> &event_ptr);
   bool save_account_in_db(std::shared_ptr<Account> &account_ptr);
-  bool update_event_in_db(std::shared_ptr<Event> &event_ptr);
+  bool update_event_in_db(const std::shared_ptr<Event> &event_ptr);
   bool remove_event_from_db(std::shared_ptr<Event> &event_ptr);
   std::vector<std::shared_ptr<Event>> _past_events, _ongoing_events,
       _future_events, _all_events;
   Storage _storage;
   time_point _now = std::chrono::system_clock::now();
   std::vector<std::shared_ptr<Account>> _accounts;
+  // TODO: get from env
+  std::string _client_secret_path = std::string(".env/client_secret.json");
   std::unique_ptr<GoogleCalendarAPI> _gcal_api;
 };
 

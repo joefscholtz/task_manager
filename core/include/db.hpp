@@ -24,6 +24,7 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
       make_table("events",
                  make_column("id", &Event::_id, primary_key().autoincrement()),
                  make_column("iCalUID", &Event::_iCalUID, unique()),
+                 make_column("etag", &Event::_etag),
                  make_column("name", &Event::_name),
                  make_column("description", &Event::_description),
                  make_column("start", &Event::_start_db),
@@ -36,7 +37,9 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
           make_column("id", &Account::_id, primary_key().autoincrement()),
           make_column("email", &Account::_email, unique()),
           make_column("account_type", &Account::_account_type_db),
-          make_column("refresh_token", &Account::_refresh_token)));
+          make_column("refresh_token",
+                      &Account::_refresh_token))); // BUG: should store
+                                                   // encrypted refresh_token
 }
 
 } // namespace task_manager
