@@ -5,12 +5,9 @@
 #include "GCalApiEvent.hpp"
 #include "GCalApiEventsList.hpp"
 #include "account.hpp"
+#include "db.hpp"
 #include "event.hpp"
 #include "gcal_api.hpp"
-
-#include "db.hpp"
-
-// #include "sqlite_orm_type_mapping.hpp"
 
 namespace task_manager {
 
