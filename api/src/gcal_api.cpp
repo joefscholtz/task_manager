@@ -193,6 +193,8 @@ GoogleCalendarAPI::list_events(int max_results,
   std::vector<GCalApiEvent> events;
   GCalApiEventsList events_list = result_json->get<GCalApiEventsList>();
   events = events_list.items;
+  for (auto &event : events)
+    event.set_account_type(AccountType::GCAL);
 
   return events;
 }

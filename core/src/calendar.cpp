@@ -314,14 +314,14 @@ bool Calendar::link_google_account(std::string client_secret_path) {
     gcal_account_ptr->set_refresh_token(this->_gcal_api->get_refresh_token());
     this->_gcal_api->clear_account();
 
-    _accounts.push_back(gcal_account_ptr);
+    this->_accounts.push_back(gcal_account_ptr);
     return true;
   }
 }
 
 bool Calendar::sync_external_events() {
   bool sync_success = true;
-  std::vector<std::unique_ptr<BaseApiEvent>> all_external_events;
+  std::vector<std::shared_ptr<BaseApiEvent>> all_external_api_event_ptrs;
 
   // Iterate through all linked accounts to fetch their events
   for (const auto &account : this->_accounts) {
@@ -349,8 +349,8 @@ bool Calendar::sync_external_events() {
       }
 
       for (auto &event : fetched_events_opt.value()) {
-        all_external_events.push_back(
-            std::make_unique<GCalApiEvent>(std::move(event)));
+        all_external_api_event_ptrs.push_back(
+            std::make_shared<GCalApiEvent>(std::move(event)));
       }
     } else if (account->get_account_type() == AccountType::UNKNOWN) {
       // TODO: debug
@@ -362,51 +362,85 @@ bool Calendar::sync_external_events() {
     }
   }
 
-  std::cout << "\nTotal ApiEvents fetched: " << all_external_events.size()
-            << std::endl;
+  std::cout << "\nTotal ApiEvents fetched: "
+            << all_external_api_event_ptrs.size() << std::endl;
 
-  for (const auto &event_ptr : all_external_events) {
-    if (event_ptr->get_account_type() == AccountType::UNKNOWN) {
+  for (const auto &api_event_ptr : all_external_api_event_ptrs) {
+    if (api_event_ptr->get_account_type() == AccountType::UNKNOWN) {
       // TODO: debug
       std::cout << "ApiEvent has unknown account_type" << std::endl;
       continue;
-    } else if (event_ptr->get_account_type() != AccountType::GCAL) {
+    } else if (api_event_ptr->get_account_type() != AccountType::GCAL) {
       // TODO: debug
       std::cout << "ApiEvent has wrong account_type" << std::endl;
       continue;
     }
 
-    const GCalApiEvent *api_event_ptr =
-        dynamic_cast<const GCalApiEvent *>(event_ptr.get());
-    if (!api_event_ptr) {
-      std::cerr
-          << "Error: ApiEvent type is GCalApiEvent but dynamic_cast failed."
-          << std::endl;
+    const auto gcal_api_event_ptr =
+        std::dynamic_pointer_cast<const GCalApiEvent>(api_event_ptr);
+    if (!gcal_api_event_ptr) {
+      std::cerr << "Error: ApiEvent pointer type is a GCalApiEvent pointer but "
+                   "dynamic_pointer_cast failed."
+                << std::endl;
       sync_success = false;
       continue;
     }
 
-    const GCalApiEvent &api_event = *api_event_ptr;
+    const GCalApiEvent &gcal_api_event = *gcal_api_event_ptr;
 
     bool exists = false;
     for (const auto &existing_event : _all_events) {
-      if (existing_event->get_iCalUID() == api_event.iCalUID) {
+      if (existing_event->get_iCalUID() == gcal_api_event.iCalUID) {
+        auto external_api_event_base_ptr =
+            existing_event->get_external_api_event_ptr();
+
+        if (!external_api_event_base_ptr) {
+          // TODO: should I fill it then??
+          std::cerr
+              << "Error: external_api_event_base_ptr is null: existing_event "
+                 "doesnt have an external_api_event. Should it be filled?"
+              << std::endl;
+          sync_success = false;
+          continue;
+        }
+
+        const auto existing_gcal_api_event_ptr =
+            std::dynamic_pointer_cast<const GCalApiEvent>(
+                external_api_event_base_ptr);
+
+        if (!existing_gcal_api_event_ptr) {
+          std::cerr << "Error: existing_api_event type is GCalApiEvent but "
+                       "dynamic_pointer_cast failed."
+                    << std::endl;
+          sync_success = false;
+          continue;
+        }
+
+        const GCalApiEvent &existing_gcal_api_event =
+            *existing_gcal_api_event_ptr;
+
+        if (gcal_api_event.etag != existing_gcal_api_event.etag) {
+          // TODO: update_event(existing_event, gcal_api_event);
+          // this->update_event_by_id(existing_event->get_id());
+          std::cerr << "ApiEvent should be updated!" << std::endl;
+        } else {
+          // TODO: recurring_events
+          std::cerr << "Recurring event found" << std::endl;
+        }
         exists = true;
-        // TODO: update_event(existing_event, api_event);
-        std::cerr << "ApiEvent should be updated!" << std::endl;
         break;
       }
     }
 
     if (!exists) {
       Event new_event;
-      new_event.set_name(api_event.summary);
+      new_event.set_name(gcal_api_event.summary);
       new_event.set_start(
-          this->_gcal_api->parse_gcal_event_datetime(api_event.start));
+          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
       new_event.set_end(
-          this->_gcal_api->parse_gcal_event_datetime(api_event.end));
-      new_event.set_iCalUID(api_event.iCalUID);
-      new_event.set_external_api_event(*event_ptr);
+          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+      new_event.set_iCalUID(gcal_api_event.iCalUID);
+      new_event.set_external_api_event_ptr(api_event_ptr);
 
       this->create_event(new_event);
       std::cout << "  + Added remote event: " << new_event.get_name()

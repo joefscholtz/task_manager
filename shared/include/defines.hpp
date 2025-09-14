@@ -17,7 +17,13 @@ namespace task_manager {
 
 using json = nlohmann::json;
 
-enum class AccountType { GCAL, UNKNOWN };
+// NOT_INHERITED: when its a class member: should've be inherited from another
+// member, source_member, of this class even if the source_member's AccountType
+// is UNKNOWN, use to prevent access before initialization
+//
+// UNKNOWN: when its a class member: the class instance is yet to be casted from
+// BaseApiObjectClass to <AccountType>ApiObjectClass
+enum class AccountType { GCAL, UNKNOWN, NOT_INHERITED };
 
 inline const std::string account_type_to_string(AccountType type) {
   switch (type) {

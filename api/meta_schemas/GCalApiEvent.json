@@ -6,6 +6,10 @@
   "base_classes": ["BaseApiEvent"],
   "include_headers": ["string", "vector", "BaseApiEvent.hpp"],
   "generate_constructor": "default",
+  "generate_clone_method": false,
+  "base_constructor_args": {
+    "BaseApiEvent": "AccountType::GCAL"
+  },
   "schema": {
     "kind": "std::string",
     "etag": "std::string",
