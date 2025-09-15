@@ -551,6 +551,12 @@ bool Calendar::sync_external_events() {
             if (existing_gcal_api_ptr->etag == gcal_api_event.etag) {
               needs_update = false; // ETags match, no update needed.
             }
+          } else {
+            std::cerr
+                << "Error: ApiEvent pointer type is a GCalApiEvent pointer but "
+                   "dynamic_pointer_cast failed."
+                << std::endl;
+            sync_success = false;
           }
         }
 
@@ -585,6 +591,39 @@ bool Calendar::sync_external_events() {
                   << std::endl;
       }
     }
+  }
+  // delete api events not found fetching
+  std::set<std::string> remote_ical_uids;
+  for (const auto &api_event_ptr : all_external_api_events_ptr) {
+    auto gcal_event_ptr =
+        std::dynamic_pointer_cast<const GCalApiEvent>(api_event_ptr);
+    if (gcal_event_ptr) {
+      remote_ical_uids.insert(gcal_event_ptr->iCalUID);
+    } else {
+      std::cerr << "Error: ApiEvent pointer type is a GCalApiEvent pointer but "
+                   "dynamic_pointer_cast failed."
+                << std::endl;
+      sync_success = false;
+    }
+  }
+  // Collect IDs of local events that need to be deleted.
+  std::vector<uint32_t> ids_to_delete;
+  for (const auto &local_event_ptr : this->_all_events) {
+    // Only consider synced events (that have an iCalUID).
+    if (auto ical_uid = local_event_ptr->get_iCalUID()) {
+      // If the local event's ID is NOT in the set of remote IDs, it was deleted
+      // on the server.
+      if (remote_ical_uids.find(*ical_uid) == remote_ical_uids.end()) {
+        std::cout << "  - Deleting local event no longer on server: "
+                  << local_event_ptr->get_name() << std::endl;
+        ids_to_delete.push_back(local_event_ptr->get_id());
+      }
+    }
+  }
+
+  // Safely delete the events using the collected IDs.
+  for (uint32_t id : ids_to_delete) {
+    this->remove_event_by_id(id);
   }
 
   // WARN: This simplified algorithm does not handle deletions of single
