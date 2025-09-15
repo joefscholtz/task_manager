@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
     Daemon daemon;
     daemon.run();
   } catch (const sdbus::Error &e) {
-    // Log sdbus errors
+    syslog(LOG_ERROR, "An unhandled DBUS exception occurred: '%s'", e.what());
     return 1;
   }
   return 0;

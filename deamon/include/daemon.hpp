@@ -3,16 +3,22 @@
 #include "defines.hpp"
 
 #include "core.hpp"
+#include "pugixml.hpp"
 #include <csignal>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <regex>
 #include <sdbus-c++/sdbus-c++.h>
 #include <string>
 #include <syslog.h>
 #include <unistd.h>
 
 namespace task_manager {
+
+using DbusMethodCallback =
+    std::function<sdbus::Variant(const std::vector<sdbus::Variant> &)>;
+
 class Daemon {
 public:
   enum class State { STARTING, CONFIGURING, ACTIVE, SHUTTING_DOWN, STOPPED };
@@ -27,6 +33,8 @@ public:
 
 private:
   // D-Bus methods that will be exposed
+  std::map<std::string, DbusMethodCallback> _dispatch_table;
+  bool populate_dbus_callbacks();
   std::string GetEventsForMonth(const int32_t &year, const int32_t &month);
   void SyncAllAccounts();
 

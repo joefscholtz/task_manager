@@ -1,5 +1,5 @@
 {
   "name": "task-manager",
   "version-string": "0.1.0",
-  "dependencies": ["cpr", "nlohmann-json", "replxx", "sdbus-cpp"]
+  "dependencies": ["cpr", "nlohmann-json", "replxx", "sdbus-cpp", "pugixml"]
 }
