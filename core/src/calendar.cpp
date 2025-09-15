@@ -1,4 +1,5 @@
 #include "calendar.hpp"
+#include <memory>
 
 namespace task_manager {
 
@@ -213,8 +214,24 @@ bool Calendar::save_account_in_db(std::shared_ptr<Account> &account_ptr) {
   }
 }
 
-bool Calendar::create_event(Event &event, const time_point &time_p) {
-  auto event_ptr = std::make_shared<Event>(event);
+bool Calendar::update_account_in_db(std::shared_ptr<Account> &account_ptr) {
+  try {
+    _storage.transaction([&]() {
+      _storage.update(*account_ptr);
+      return true;
+    });
+    return true;
+  } catch (const std::exception &e) {
+    std::cerr << "Error updating account: " << e.what() << std::endl;
+    return false;
+  } catch (...) {
+    std::cerr << "Unknown error updating account" << std::endl;
+    return false;
+  }
+}
+
+bool Calendar::create_event(std::shared_ptr<Event> &event_ptr,
+                            const time_point &time_p) {
   if (!this->save_event_in_db(event_ptr))
     return false;
 
@@ -228,6 +245,10 @@ bool Calendar::create_event(Event &event, const time_point &time_p) {
     this->_ongoing_events.push_back(event_ptr);
   }
   return true;
+}
+bool Calendar::create_event(Event &event, const time_point &time_p) {
+  auto event_ptr = std::make_shared<Event>(event);
+  return this->create_event(event_ptr, time_p);
 }
 
 bool Calendar::update_event_in_db(const std::shared_ptr<Event> &event_ptr) {
@@ -345,85 +366,104 @@ bool Calendar::link_google_account() {
     return true;
   }
 }
+// TODO: Maybe move to db
+bool Calendar::nuke_n_pave(std::shared_ptr<Account> &account) {
+  std::cout << "  - Clearing old recurring event instances..." << std::endl;
+  this->_storage.remove_all<Event>(
+      where(c(&Event::_account_id) == account->get_id() and
+            is_not_null(&Event::_recurring_event_id)));
+
+  return true;
+}
+
+// TODO: return account_status
+bool Calendar::check_account_api(const std::shared_ptr<Account> &account) {
+  auto account_type = account->get_account_type();
+  if (account_type == AccountType::LOCAL) {
+    return false; // nothing to do
+  } else if (account_type != AccountType::GCAL) {
+    std::cerr << "Api not implemented for AccountType: "
+              << account_type_to_string(account_type) << std::endl;
+    return false;
+  } else {
+    if (!this->_gcal_api) {
+      std::cerr << "Error: Google Calendar API is not initialized."
+                << std::endl;
+      return false;
+    }
+    std::cout << "Syncing with Google Calendar for account: "
+              << account->get_email() << "..." << std::endl;
+  }
+  return true;
+}
 
 bool Calendar::sync_external_events() {
   // TODO: debug
   std::cout << "sync_external_events" << std::endl;
-
   bool sync_success = true;
-  std::vector<std::shared_ptr<BaseApiEvent>> all_external_api_event_ptrs;
+  std::vector<std::shared_ptr<BaseApiEvent>> all_external_api_events_ptr;
 
-  // Iterate through all linked accounts to fetch their events
-  for (const auto &account : this->_accounts) {
-    if (account->get_account_type() == AccountType::LOCAL)
+  // Fetch remote events and wipe old recurring instances
+  for (auto &account_ptr : this->_accounts) {
+
+    if (!this->check_account_api(account_ptr)) {
+      sync_success = false;
       continue;
+    }
 
-    if (account->get_account_type() == AccountType::GCAL) {
-      if (!this->_gcal_api) {
-        std::cerr << "Error: Google Calendar API is not initialized."
-                  << std::endl;
-        sync_success = false;
-        continue;
-      }
+    // --- "Nuke and Pave" for recurring events ---
+    // Before fetching, delete all existing recurring instances for this
+    // account. This prevents duplicates when a whole series is moved or
+    // changed.
+    this->nuke_n_pave(account_ptr);
 
-      std::cout << "Syncing with Google Calendar for account: "
-                << account->get_email() << "..." << std::endl;
+    auto fetched_events_opt =
+        this->_gcal_api->list_events(500, account_ptr->get_refresh_token());
+    account_ptr->set_refresh_token(this->_gcal_api->get_refresh_token());
+    this->update_account_in_db(account_ptr);
+    this->_gcal_api->clear_account();
 
-      std::optional<std::vector<GCalApiEvent>> fetched_events_opt =
-          this->_gcal_api->list_events(500, account->get_refresh_token());
-      account->set_refresh_token(this->_gcal_api->get_refresh_token());
-      this->_gcal_api->clear_account();
-
-      if (!fetched_events_opt) {
-        std::cerr << "Error: Could not sync account: " << account->get_email()
-                  << std::endl;
-        sync_success = false;
-        continue;
-      }
-
-      for (auto &event : fetched_events_opt.value()) {
-        all_external_api_event_ptrs.push_back(
-            std::make_shared<GCalApiEvent>(std::move(event)));
-      }
-    } else if (account->get_account_type() == AccountType::NOT_INHERITED) {
-      // TODO: debug
-      std::cout << "Account didn't inherited AccountType" << std::endl;
+    if (!fetched_events_opt) {
+      std::cerr << "Error: Could not sync account: " << account_ptr->get_email()
+                << std::endl;
+      sync_success = false;
       continue;
+    }
 
-    } else if (account->get_account_type() == AccountType::UNKNOWN) {
-      // TODO: debug
-      std::cout << "Account has unknown account_type" << std::endl;
-      continue;
-
-    } else {
-      // TODO: debug
-      std::cout << "Account has wrong account_type" << std::endl;
-      continue;
+    for (auto &event : fetched_events_opt.value()) {
+      all_external_api_events_ptr.push_back(
+          std::make_shared<GCalApiEvent>(std::move(event)));
     }
   }
 
   std::cout << "\nTotal ApiEvents fetched: "
-            << all_external_api_event_ptrs.size() << std::endl;
+            << all_external_api_events_ptr.size() << std::endl;
 
-  for (const auto &api_event_ptr : all_external_api_event_ptrs) {
-    if (api_event_ptr->get_account_type() == AccountType::UNKNOWN) {
-      // TODO: debug
-      std::cout << "ApiEvent has unknown account_type" << std::endl;
+  std::map<std::string, std::shared_ptr<Event>> single_events_map;
+  std::map<std::string, std::shared_ptr<Event>> recurring_series_map;
+
+  for (const auto &event_ptr : this->_all_events) {
+    if (!event_ptr->get_recurring_event_id().empty()) {
+      // This event is the primary for a recurring series
+      recurring_series_map[event_ptr->get_recurring_event_id()] = event_ptr;
+      event_ptr->clear_external_api_recurring_event_ptr();
+    } else if (auto ical_uid = event_ptr->get_iCalUID()) {
+      // This is a single, one-off event
+      single_events_map[*ical_uid] = event_ptr;
+    }
+  }
+
+  // process fetched events (create or update)
+  for (const auto &api_event_ptr : all_external_api_events_ptr) {
+    auto account_type = api_event_ptr->get_account_type();
+    if (account_type == AccountType::LOCAL) {
+      std::cerr << "AccountType: " << account_type_to_string(account_type)
+                << " skiping" << std::endl;
       continue;
-    } else if (api_event_ptr->get_account_type() ==
-               AccountType::NOT_INHERITED) {
-      // TODO: debug
-      std::cout << "ApiEvent didn't inherited AccountType" << std::endl;
-      continue;
-    } else if (api_event_ptr->get_account_type() == AccountType::LOCAL) {
-      // TODO: debug
-      std::cout << "ApiEvent AccountType is LOCAL but it should've been "
-                   "filtered already"
+    } else if (account_type != AccountType::GCAL) {
+      std::cerr << "create/update not implemented for AccountType"
+                << account_type_to_string(account_type) << " skiping"
                 << std::endl;
-      continue;
-    } else if (api_event_ptr->get_account_type() != AccountType::GCAL) {
-      // TODO: debug
-      std::cout << "ApiEvent has wrong account_type" << std::endl;
       continue;
     }
 
@@ -439,96 +479,157 @@ bool Calendar::sync_external_events() {
 
     const GCalApiEvent &gcal_api_event = *gcal_api_event_ptr;
 
-    bool exists = false;
-    for (const auto &existing_event_ptr : this->_all_events) {
-      if (existing_event_ptr->get_iCalUID() == gcal_api_event.iCalUID) {
-        auto external_api_event_base_ptr =
+    if (!gcal_api_event.recurringEventId.empty()) {
+      auto series_it =
+          recurring_series_map.find(gcal_api_event.recurringEventId);
+
+      if (series_it != recurring_series_map.end()) {
+        // Recurring event in db found, add recurring instance to
+        // _external_api_recurring_event_ptr vector
+
+        // Primary local Event for this series.
+        std::shared_ptr<Event> primary_event_ptr = series_it->second;
+
+        // Add this new instance to the primary event's recurring list if
+        // enabled
+        if (primary_event_ptr->get_store_recurring_events()) {
+          primary_event_ptr->push_back_external_api_recurring_event_ptr(
+              api_event_ptr);
+        }
+        // update primary instance
+        // TODO: fetch primary event from to get the actual primary event
+        // updated
+        primary_event_ptr->set_name(gcal_api_event.summary);
+        primary_event_ptr->set_start(this->_gcal_api->parse_gcal_event_datetime(
+            gcal_api_event.start)); // For a recurring event, start is the
+                                    // start time of the first instance.
+        primary_event_ptr->set_end(this->_gcal_api->parse_gcal_event_datetime(
+            gcal_api_event.end)); // For a recurring event, end is the end
+                                  // time of the first instance.
+        primary_event_ptr->set_etag(gcal_api_event.etag);
+        primary_event_ptr->set_recurring_event_id(
+            gcal_api_event.recurringEventId);
+
+        sync_success &= this->update_event_in_db(primary_event_ptr);
+
+      } else {
+        // FIRST instance seen for a new recurring series.
+        // create a new primary Event for it.
+        Event new_primary_event;
+        new_primary_event.set_name(gcal_api_event.summary);
+        new_primary_event.set_start(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+        new_primary_event.set_end(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+        new_primary_event.set_iCalUID(gcal_api_event.iCalUID);
+        new_primary_event.set_recurring_event_id(
+            gcal_api_event.recurringEventId);
+        new_primary_event.set_external_api_event_ptr(api_event_ptr);
+
+        std::shared_ptr<Event> new_primary_event_ptr =
+            std::make_shared<Event>(new_primary_event);
+        if (this->create_event(new_primary_event_ptr)) {
+          recurring_series_map[gcal_api_event.recurringEventId] =
+              new_primary_event_ptr;
+        } else {
+          sync_success = false;
+        }
+      }
+    } else {
+      // Single events
+      auto event_it = single_events_map.find(gcal_api_event.iCalUID);
+      if (event_it != single_events_map.end()) {
+        std::shared_ptr<Event> existing_event_ptr = event_it->second;
+        auto existing_api_ptr =
             existing_event_ptr->get_external_api_event_ptr();
 
-        if (!external_api_event_base_ptr) {
-          // TODO: should I fill it then??
-          // I have to check if it happens in any case other resyncing
-          if (existing_event_ptr->get_etag() == gcal_api_event.etag) {
-            existing_event_ptr->set_external_api_event_ptr(api_event_ptr);
-            std::cerr << "Error: external_api_event_base_ptr is null: "
-                         "existing_event_ptr "
-                         "doesnt have an external_api_event. Filling, but "
-                         "should it be "
-                         "filled?"
-                      << std::endl;
-
-            external_api_event_base_ptr =
-                existing_event_ptr->get_external_api_event_ptr();
+        bool needs_update = true;
+        if (existing_api_ptr) {
+          auto existing_gcal_api_ptr =
+              std::dynamic_pointer_cast<const GCalApiEvent>(existing_api_ptr);
+          if (existing_gcal_api_ptr) {
+            if (existing_gcal_api_ptr->etag == gcal_api_event.etag) {
+              needs_update = false; // ETags match, no update needed.
+            }
           } else {
-            std::cout << "existing_event_ptr->get_iCalUID() == "
-                         "gcal_api_event.iCalUID but "
-                         "existing_event_ptr->get_etag() != gcal_api_event.etag"
-                      << std::endl;
-          }
-          if (!external_api_event_base_ptr) {
-            std::cerr << "Fatal Error: external_api_event_base_ptr is even "
-                         "after trying to use api_event_ptr"
-                      << std::endl;
+            std::cerr
+                << "Error: ApiEvent pointer type is a GCalApiEvent pointer but "
+                   "dynamic_pointer_cast failed."
+                << std::endl;
             sync_success = false;
-            // TODO: should I skip?
-            // continue;
           }
         }
 
-        const auto existing_gcal_api_event_ptr =
-            std::dynamic_pointer_cast<const GCalApiEvent>(
-                external_api_event_base_ptr);
+        if (needs_update) {
+          existing_event_ptr->set_name(gcal_api_event.summary);
+          existing_event_ptr->set_start(
+              this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+          existing_event_ptr->set_end(
+              this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+          existing_event_ptr->set_etag(gcal_api_event.etag);
+          existing_event_ptr->set_recurring_event_id(
+              gcal_api_event.recurringEventId);
+          existing_event_ptr->set_external_api_event_ptr(api_event_ptr);
 
-        if (!existing_gcal_api_event_ptr) {
-          std::cerr << "Error: existing_api_event type is GCalApiEvent but "
-                       "dynamic_pointer_cast failed."
-                    << std::endl;
-          sync_success = false;
-          continue;
+          sync_success &= this->update_event_in_db(existing_event_ptr);
         }
+      } else {
+        Event new_event;
+        new_event.set_name(gcal_api_event.summary);
+        new_event.set_start(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+        new_event.set_end(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+        new_event.set_iCalUID(gcal_api_event.iCalUID);
+        new_event.set_etag(gcal_api_event.etag);
+        new_event.set_external_api_event_ptr(api_event_ptr);
+        new_event.set_recurring_event_id(gcal_api_event.recurringEventId);
 
-        const GCalApiEvent &existing_gcal_api_event =
-            *existing_gcal_api_event_ptr;
+        sync_success &= this->create_event(new_event);
 
-        if (gcal_api_event.etag != existing_gcal_api_event.etag) {
-          // TODO: check if update_event works
-          std::cerr << "ApiEvent should be updated!" << std::endl;
-          this->update_event_in_db(existing_event_ptr);
-          std::cerr << "ApiEvent updated!" << std::endl;
-        } else {
-          // TODO: recurring_events
-          std::cerr << "Recurring event found" << std::endl;
-        }
-        exists = true;
-        break;
+        std::cout << "  + Added remote event: " << new_event.get_name()
+                  << std::endl;
       }
     }
-
-    if (!exists) {
-      Event new_event;
-      new_event.set_name(gcal_api_event.summary);
-      new_event.set_start(
-          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
-      new_event.set_end(
-          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
-      new_event.set_iCalUID(gcal_api_event.iCalUID);
-      new_event.set_etag(gcal_api_event.etag);
-      new_event.set_external_api_event_ptr(api_event_ptr);
-
-      this->create_event(new_event);
-      std::cout << "  + Added remote event: " << new_event.get_name()
+  }
+  // delete api events not found fetching
+  std::set<std::string> remote_ical_uids;
+  for (const auto &api_event_ptr : all_external_api_events_ptr) {
+    auto gcal_event_ptr =
+        std::dynamic_pointer_cast<const GCalApiEvent>(api_event_ptr);
+    if (gcal_event_ptr) {
+      remote_ical_uids.insert(gcal_event_ptr->iCalUID);
+    } else {
+      std::cerr << "Error: ApiEvent pointer type is a GCalApiEvent pointer but "
+                   "dynamic_pointer_cast failed."
                 << std::endl;
+      sync_success = false;
+    }
+  }
+  // Collect IDs of local events that need to be deleted.
+  std::vector<uint32_t> ids_to_delete;
+  for (const auto &local_event_ptr : this->_all_events) {
+    // Only consider synced events (that have an iCalUID).
+    if (auto ical_uid = local_event_ptr->get_iCalUID()) {
+      // If the local event's ID is NOT in the set of remote IDs, it was deleted
+      // on the server.
+      if (remote_ical_uids.find(*ical_uid) == remote_ical_uids.end()) {
+        std::cout << "  - Deleting local event no longer on server: "
+                  << local_event_ptr->get_name() << std::endl;
+        ids_to_delete.push_back(local_event_ptr->get_id());
+      }
     }
   }
 
-  sync_success &= update_ongoing_events();
-
-  if (sync_success) {
-    std::cout << "\nSync complete." << std::endl;
-  } else {
-    std::cout << "\nSync completed with one or more errors." << std::endl;
+  // Safely delete the events using the collected IDs.
+  for (uint32_t id : ids_to_delete) {
+    this->remove_event_by_id(id);
   }
 
+  // WARN: This simplified algorithm does not handle deletions of single
+  // events. A full diffing algorithm would be needed for that.
+  sync_success &= update_ongoing_events();
+  std::cout << "\nSync complete." << std::endl;
   return sync_success;
 }
 

@@ -25,6 +25,7 @@ inline auto init_storage(const std::string &db_path = get_user_db_path()) {
                  make_column("id", &Event::_id, primary_key().autoincrement()),
                  make_column("iCalUID", &Event::_iCalUID, unique()),
                  make_column("etag", &Event::_etag),
+                 make_column("recurringEventId", &Event::_recurring_event_id),
                  make_column("name", &Event::_name),
                  make_column("description", &Event::_description),
                  make_column("start", &Event::_start_db),

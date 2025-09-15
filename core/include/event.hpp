@@ -40,6 +40,13 @@ public:
     this->_iCalUID = iCalUID;
   }
 
+  inline void set_recurring_event_id(const std::string &recurring_event_id) {
+    this->_recurring_event_id = recurring_event_id;
+  }
+  inline const std::string &get_recurring_event_id() const {
+    return this->_recurring_event_id;
+  }
+
   inline const std::optional<std::string> &get_etag() const {
     return this->_etag;
   }
@@ -58,6 +65,32 @@ public:
   }
   inline void set_external_api_event_ptr(const BaseApiEvent &api_event) {
     set_external_api_event_ptr(std::make_shared<BaseApiEvent>(api_event));
+  }
+
+  inline const std::vector<std::shared_ptr<BaseApiEvent>> &
+  get_external_api_recurring_events_ptr() const {
+    return this->_external_api_recurring_events_ptr;
+  }
+  inline void set_external_api_recurring_events_ptr(
+      const std::vector<std::shared_ptr<BaseApiEvent>>
+          &external_api_recurring_events_ptr) {
+    this->_external_api_recurring_events_ptr =
+        external_api_recurring_events_ptr;
+  }
+  inline void push_back_external_api_recurring_event_ptr(
+      const std::shared_ptr<BaseApiEvent> &external_api_recurring_event_ptr) {
+    this->_external_api_recurring_events_ptr.push_back(
+        external_api_recurring_event_ptr);
+  }
+  inline void clear_external_api_recurring_event_ptr() {
+    this->_external_api_recurring_events_ptr.clear();
+  }
+
+  inline const bool &get_store_recurring_events() const {
+    return this->_store_recurring_events;
+  }
+  inline void set_store_recurring_events(bool store_recurring_events) {
+    this->_store_recurring_events = store_recurring_events;
   }
 
   inline const std::string &get_name() const { return this->_name; }
@@ -97,7 +130,10 @@ public:
   uint32_t _id;
   std::optional<std::string> _iCalUID;
   std::optional<std::string> _etag;
+  std::string _recurring_event_id;
   std::shared_ptr<BaseApiEvent> _external_api_event_ptr;
+  std::vector<std::shared_ptr<BaseApiEvent>> _external_api_recurring_events_ptr;
+  bool _store_recurring_events = true;
   AccountType _external_account_type = AccountType::NOT_INHERITED;
   time_point _start, _end;
   std::string _name;
