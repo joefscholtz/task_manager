@@ -230,8 +230,8 @@ bool Calendar::update_account_in_db(std::shared_ptr<Account> &account_ptr) {
   }
 }
 
-bool Calendar::create_event(Event &event, const time_point &time_p) {
-  auto event_ptr = std::make_shared<Event>(event);
+bool Calendar::create_event(std::shared_ptr<Event> &event_ptr,
+                            const time_point &time_p) {
   if (!this->save_event_in_db(event_ptr))
     return false;
 
@@ -245,6 +245,10 @@ bool Calendar::create_event(Event &event, const time_point &time_p) {
     this->_ongoing_events.push_back(event_ptr);
   }
   return true;
+}
+bool Calendar::create_event(Event &event, const time_point &time_p) {
+  auto event_ptr = std::make_shared<Event>(event);
+  return this->create_event(event_ptr, time_p);
 }
 
 bool Calendar::update_event_in_db(const std::shared_ptr<Event> &event_ptr) {
@@ -435,10 +439,17 @@ bool Calendar::sync_external_events() {
   std::cout << "\nTotal ApiEvents fetched: "
             << all_external_api_events_ptr.size() << std::endl;
 
-  std::map<std::string, std::shared_ptr<Event>> events_map;
+  std::map<std::string, std::shared_ptr<Event>> single_events_map;
+  std::map<std::string, std::shared_ptr<Event>> recurring_series_map;
+
   for (const auto &event_ptr : this->_all_events) {
-    if (auto ical_uid = event_ptr->get_iCalUID()) {
-      events_map[*ical_uid] = event_ptr;
+    if (!event_ptr->get_recurring_event_id().empty()) {
+      // This event is the primary for a recurring series
+      recurring_series_map[event_ptr->get_recurring_event_id()] = event_ptr;
+      event_ptr->clear_external_api_recurring_event_ptr();
+    } else if (auto ical_uid = event_ptr->get_iCalUID()) {
+      // This is a single, one-off event
+      single_events_map[*ical_uid] = event_ptr;
     }
   }
 
@@ -468,56 +479,115 @@ bool Calendar::sync_external_events() {
 
     const GCalApiEvent &gcal_api_event = *gcal_api_event_ptr;
 
-    auto it = events_map.find(gcal_api_event.iCalUID);
+    if (!gcal_api_event.recurringEventId.empty()) {
+      auto series_it =
+          recurring_series_map.find(gcal_api_event.recurringEventId);
 
-    if (it != events_map.end()) {
-      std::shared_ptr<Event> existing_event_ptr = it->second;
-      auto existing_api_ptr = existing_event_ptr->get_external_api_event_ptr();
+      if (series_it != recurring_series_map.end()) {
+        // Recurring event in db found, add recurring instance to
+        // _external_api_recurring_event_ptr vector
 
-      bool needs_update = true;
-      if (existing_api_ptr) {
-        auto existing_gcal_api_ptr =
-            std::dynamic_pointer_cast<const GCalApiEvent>(existing_api_ptr);
-        if (existing_gcal_api_ptr) {
-          if (existing_gcal_api_ptr->etag == gcal_api_event.etag) {
-            needs_update = false; // ETags match, no update needed.
-          }
+        // Primary local Event for this series.
+        std::shared_ptr<Event> primary_event_ptr = series_it->second;
+
+        // Add this new instance to the primary event's recurring list if
+        // enabled
+        if (primary_event_ptr->get_store_recurring_events()) {
+          primary_event_ptr->push_back_external_api_recurring_event_ptr(
+              api_event_ptr);
+        }
+        // update primary instance
+        // TODO: fetch primary event from to get the actual primary event
+        // updated
+        primary_event_ptr->set_name(gcal_api_event.summary);
+        primary_event_ptr->set_start(this->_gcal_api->parse_gcal_event_datetime(
+            gcal_api_event.start)); // For a recurring event, start is the
+                                    // start time of the first instance.
+        primary_event_ptr->set_end(this->_gcal_api->parse_gcal_event_datetime(
+            gcal_api_event.end)); // For a recurring event, end is the end
+                                  // time of the first instance.
+        primary_event_ptr->set_etag(gcal_api_event.etag);
+        primary_event_ptr->set_recurring_event_id(
+            gcal_api_event.recurringEventId);
+
+        sync_success &= this->update_event_in_db(primary_event_ptr);
+
+      } else {
+        // FIRST instance seen for a new recurring series.
+        // create a new primary Event for it.
+        Event new_primary_event;
+        new_primary_event.set_name(gcal_api_event.summary);
+        new_primary_event.set_start(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+        new_primary_event.set_end(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+        new_primary_event.set_iCalUID(gcal_api_event.iCalUID);
+        new_primary_event.set_recurring_event_id(
+            gcal_api_event.recurringEventId);
+        new_primary_event.set_external_api_event_ptr(api_event_ptr);
+
+        std::shared_ptr<Event> new_primary_event_ptr =
+            std::make_shared<Event>(new_primary_event);
+        if (this->create_event(new_primary_event_ptr)) {
+          recurring_series_map[gcal_api_event.recurringEventId] =
+              new_primary_event_ptr;
+        } else {
+          sync_success = false;
         }
       }
-
-      if (needs_update) {
-        existing_event_ptr->set_name(gcal_api_event.summary);
-        existing_event_ptr->set_start(
-            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
-        existing_event_ptr->set_end(
-            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
-        existing_event_ptr->set_etag(gcal_api_event.etag);
-        existing_event_ptr->set_recurring_event_id(
-            gcal_api_event.recurringEventId);
-        existing_event_ptr->set_external_api_event_ptr(api_event_ptr);
-
-        sync_success &= this->update_event_in_db(existing_event_ptr);
-      }
     } else {
-      Event new_event;
-      new_event.set_name(gcal_api_event.summary);
-      new_event.set_start(
-          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
-      new_event.set_end(
-          this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
-      new_event.set_iCalUID(gcal_api_event.iCalUID);
-      new_event.set_etag(gcal_api_event.etag);
-      new_event.set_external_api_event_ptr(api_event_ptr);
-      new_event.set_recurring_event_id(gcal_api_event.recurringEventId);
+      // Single events
+      auto event_it = single_events_map.find(gcal_api_event.iCalUID);
+      if (event_it != single_events_map.end()) {
+        std::shared_ptr<Event> existing_event_ptr = event_it->second;
+        auto existing_api_ptr =
+            existing_event_ptr->get_external_api_event_ptr();
 
-      sync_success &= this->create_event(new_event);
+        bool needs_update = true;
+        if (existing_api_ptr) {
+          auto existing_gcal_api_ptr =
+              std::dynamic_pointer_cast<const GCalApiEvent>(existing_api_ptr);
+          if (existing_gcal_api_ptr) {
+            if (existing_gcal_api_ptr->etag == gcal_api_event.etag) {
+              needs_update = false; // ETags match, no update needed.
+            }
+          }
+        }
 
-      std::cout << "  + Added remote event: " << new_event.get_name()
-                << std::endl;
+        if (needs_update) {
+          existing_event_ptr->set_name(gcal_api_event.summary);
+          existing_event_ptr->set_start(
+              this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+          existing_event_ptr->set_end(
+              this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+          existing_event_ptr->set_etag(gcal_api_event.etag);
+          existing_event_ptr->set_recurring_event_id(
+              gcal_api_event.recurringEventId);
+          existing_event_ptr->set_external_api_event_ptr(api_event_ptr);
+
+          sync_success &= this->update_event_in_db(existing_event_ptr);
+        }
+      } else {
+        Event new_event;
+        new_event.set_name(gcal_api_event.summary);
+        new_event.set_start(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.start));
+        new_event.set_end(
+            this->_gcal_api->parse_gcal_event_datetime(gcal_api_event.end));
+        new_event.set_iCalUID(gcal_api_event.iCalUID);
+        new_event.set_etag(gcal_api_event.etag);
+        new_event.set_external_api_event_ptr(api_event_ptr);
+        new_event.set_recurring_event_id(gcal_api_event.recurringEventId);
+
+        sync_success &= this->create_event(new_event);
+
+        std::cout << "  + Added remote event: " << new_event.get_name()
+                  << std::endl;
+      }
     }
   }
 
-  // Note: This simplified algorithm does not handle deletions of single
+  // WARN: This simplified algorithm does not handle deletions of single
   // events. A full diffing algorithm would be needed for that.
   sync_success &= update_ongoing_events();
   std::cout << "\nSync complete." << std::endl;

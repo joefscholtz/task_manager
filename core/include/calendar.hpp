@@ -37,6 +37,10 @@ public:
   }
   inline Storage &get_storage() { return this->_storage; }
   inline const Storage &get_storage() const { return this->_storage; }
+
+  bool
+  create_event(std::shared_ptr<Event> &event_ptr,
+               const time_point &time_p = std::chrono::system_clock::now());
   bool
   create_event(Event &event,
                const time_point &time_p = std::chrono::system_clock::now());
