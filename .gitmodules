@@ -8,3 +8,6 @@
 	path = 3rd_party/sqlite_orm
 	url = git@github.com:fnc12/sqlite_orm.git
 	branch = dev
+[submodule "3rd_party/sdbus-cpp"]
+	path = 3rd_party/sdbus-cpp
+	url = https://github.com/Kistler-Group/sdbus-cpp.git

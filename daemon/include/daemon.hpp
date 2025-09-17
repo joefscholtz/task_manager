@@ -27,7 +27,7 @@ public:
   ~Daemon();
 
   inline const State &get_state() const { return this->_state; }
-  inline void set_state(State id) { this->_state = state; }
+  inline void set_state(State state) { this->_state = state; }
 
   void run();
 

@@ -29,3 +29,10 @@ target_link_libraries(third_party INTERFACE sqlite_orm SQLite::SQLite3)
 # It just needs to be built so other parts of the project can use it.
 add_subdirectory(cpp_json_class_gen)
 
+
+# ===============================
+# cpp_json_class_gen 
+# ===============================
+add_subdirectory(sdbus-cpp)
+target_link_libraries(third_party INTERFACE sdbus-c++)
+

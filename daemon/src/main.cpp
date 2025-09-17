@@ -1,6 +1,6 @@
 #include "defines.hpp"
 
-#include "Daemon.hpp"
+#include "daemon.hpp"
 
 using namespace task_manager;
 

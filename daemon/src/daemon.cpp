@@ -29,9 +29,9 @@ Daemon::~Daemon() {
 void Daemon::handle_signal(int signal) {
   if (s_instance) {
     syslog(LOG_INFO, "Shutdown signal received. Cleaning up...");
-    s_instance->set_state(STATE::SHUTTING_DOWN);
+    s_instance->set_state(Daemon::STATE::SHUTTING_DOWN);
     s_instance->_shutdown_requested = true;
-    this->remove_pid_file();
+    s_instance->remove_pid_file();
   }
 }
 
@@ -67,8 +67,9 @@ void Daemon::init_dbus() {
     syslog(LOG_INFO, "D-Bus: Initializing service '%s' at path '%s'",
            serviceName.c_str(), objectPath.c_str());
 
-    this->_connection = sdbus::createSessionBusConnection(serviceName);
-    this->_dbus_object = sdbus::createObject(*_connection, objectPath);
+    this->_dbus_connection = sdbus::createSessionBusConnection(serviceName);
+    this->_dbus_object =
+        sdbus::createObject(*this->_dbus_connection, objectPath);
 
     for (pugi::xml_node method_node : interface_node.children("method")) {
       std::string method_name = method_node.attribute("name").value();
@@ -100,41 +101,41 @@ void Daemon::run() {
   syslog(LOG_INFO, "Daemon starting up...");
 
   // The main lifecycle loop
-  while (this->_state != State::STOPPED && !this->_shutdown_requested) {
+  while (this->_state != Daemon::State::STOPPED && !this->_shutdown_requested) {
     switch (this->_state) {
-    case State::STARTING:
-      syslog(LOG_INFO, "State: STARTING -> CONFIGURING");
+    case Daemon::State::STARTING:
+      syslog(LOG_INFO, "Daemon::State: STARTING -> CONFIGURING");
       // Minimal setup before configuration
-      this->_state = State::CONFIGURING;
+      this->_state = Daemon::State::CONFIGURING;
       break;
 
-    case State::CONFIGURING:
-      syslog(LOG_INFO, "State: CONFIGURING -> ACTIVE");
+    case Daemon::State::CONFIGURING:
+      syslog(LOG_INFO, "Daemon::State: CONFIGURING -> ACTIVE");
       // Load settings, initialize Calendar, connect to DB
       this->init_dbus();
-      this->_state = State::ACTIVE;
+      this->_state = Daemon::State::ACTIVE;
       break;
 
-    case State::ACTIVE:
+    case Daemon::State::ACTIVE:
       // This is the main operational state.
       // It will block here until a request comes in or the loop is interrupted.
-      this->_connection->processRequests();
+      this->_dbus_connection->processRequests();
       break;
 
-    case State::SHUTTING_DOWN:
+    case Daemon::State::SHUTTING_DOWN:
       syslog(LOG_INFO, "State: SHUTTING_DOWN -> STOPPED");
       // Clean up resources
-      this->_state = State::STOPPED;
+      this->_state = Daemon::State::STOPPED;
       break;
 
-    case State::STOPPED:
+    case Daemon::State::STOPPED:
       // Loop will terminate
       break;
     }
   }
 
   // If the loop was exited because a signal was received
-  if (_shutdown_requested && _state != State::STOPPED) {
+  if (_shutdown_requested && _state != Daemon::State::STOPPED) {
     syslog(LOG_INFO, "Shutdown requested. Finalizing...");
     // Perform final cleanup
   }

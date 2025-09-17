@@ -32,7 +32,26 @@ README.md
 - make
 - sqlite3
 - vcpkg
+-
 - just \[Optional\]
+  Daemon
+- pkg-config
+- systemd-devel
+
+you migh need to
+
+```bash
+sudo find /usr -name "systemd.pc"
+#check if its it present in
+pkg-config --variable pc_path pkg-config
+#if it is not, you should add to PKG_CONFIG_PATH manually
+
+PKG_CONFIG_PATH_TO_ADD=$(pkg-config --variable pc_path pkg-config)
+
+export PKG_CONFIG_PATH=$PKG_CONFIG_PATH_TO_ADD:$PKG_CONFIG_PATH
+```
+
+consider adding it to your `~/.bashrc` or `~/.zshrc` file
 
 ## Build
 
