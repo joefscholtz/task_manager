@@ -19,17 +19,23 @@ namespace task_manager {
 using DbusMethodCallback =
     std::function<sdbus::Variant(const std::vector<sdbus::Variant> &)>;
 
-class Daemon {
+struct DbusConfig {
+  std::string xml_file_path;
+  pugi::xml_node interface_node;
+  std::string service_name;
+  std::string object_path;
+};
+
+class Daemon final
+    : public sdbus::AdaptorInterfaces<sdbus::Properties_adaptor> {
 public:
   enum class State { STARTING, CONFIGURING, ACTIVE, SHUTTING_DOWN, STOPPED };
 
-  Daemon();
+  Daemon(sdbus::IConnection &connection, const DbusConfig &config);
   ~Daemon();
 
   inline const State &get_state() const { return this->_state; }
-  inline void set_state(State state) { this->_state = state; }
-
-  void run();
+  inline void set_state(State &state) { this->_state = state; }
 
 private:
   // D-Bus methods that will be exposed
@@ -38,19 +44,16 @@ private:
   std::string GetEventsForMonth(const int32_t &year, const int32_t &month);
   void SyncAllAccounts();
 
-  void init_dbus();
-  std::string get_pid_file_path();
-  void create_pid_file();
-  void remove_pid_file();
-
-  // Signal handling
-  static void handle_signal(int signal);
-  static Daemon *s_instance;
+  bool init_dbus();
 
   task_manager::Calendar _calendar;
-  std::unique_ptr<sdbus::IConnection> _dbus_connection;
+  std::string _xml_file_path;
+  // pugi::xml_document _dbus_interface_xml;
+  pugi::xml_node _interface_node;
+  std::string _service_name;
+  std::string _object_path;
+
   std::unique_ptr<sdbus::IObject> _dbus_object;
-  bool _shutdown_requested = false;
   State _state = State::STARTING;
 };
 } // namespace task_manager
