@@ -12,28 +12,55 @@ Daemon::Daemon(sdbus::IConnection &connection, const DbusConfig &config)
 
 bool Daemon::init_dbus() {
   try {
-    this->populate_dbus_callbacks();
     syslog(LOG_INFO, "D-Bus: Initializing service '%s' at path '%s'",
            this->_service_name.c_str(), this->_object_path.c_str());
 
-    for (pugi::xml_node method_node :
-         this->_interface_node.children("method")) {
-      std::string method_name = method_node.attribute("name").value();
+    for (pugi::xml_node node : this->_interface_node.children()) {
+      std::string node_name = node.name();
 
-      auto it = _dispatch_table.find(method_name);
-      if (it != _dispatch_table.end()) {
-        this->registerMethod(method_name)
-            .onInterface(this->_service_name)
-            .implementedAs(it->second);
-        syslog(LOG_INFO, "D-Bus: Registered method '%s'", method_name.c_str());
-      } else {
-        syslog(LOG_WARNING,
-               "D-Bus: Method '%s' found in XML but has no C++ implementation.",
-               method_name.c_str());
+      if (node_name == "method") {
+        std::string method_name = node.attribute("name").value();
+        if (method_name == "GetEventsForMonth") {
+          registerMethod(method_name)
+              .onInterface(this->_service_name)
+              .implementedAs([this](const int32_t &year, const int32_t &month) {
+                return this->GetEventsForMonth(year, month);
+              });
+          syslog(LOG_INFO, "  - Registered Method: %s", method_name.c_str());
+        } else if (method_name == "SyncAllAccounts") {
+          registerMethod(method_name)
+              .onInterface(this->_service_name)
+              .implementedAs([this]() { this->SyncAllAccounts(); });
+          syslog(LOG_INFO, "  - Registered Method: %s", method_name.c_str());
+        } else {
+          syslog(LOG_WARNING,
+                 "  - WARNING: Method '%s' from XML has no C++ implementation.",
+                 method_name.c_str());
+        }
+      } else if (node_name == "signal") {
+        std::string signal_name = node.attribute("name").value();
+        registerSignal(signal_name).onInterface(config.service_name);
+        syslog(LOG_INFO, "  - Registered Signal: %s", signal_name.c_str());
+      } else if (node_name == "property") {
+        std::string prop_name = node.attribute("name").value();
+        std::string access = node.attribute("access").value();
+
+        auto prop =
+            registerProperty(prop_name).onInterface(config.service_name);
+
+        if (access == "read" || access == "readwrite") {
+          prop.withGetter(
+              [this, prop_name]() { return this->getProperty(prop_name); });
+        }
+        if (access == "write" || access == "readwrite") {
+          prop.withSetter([this, prop_name](const sdbus::Variant &value) {
+            this->setProperty(prop_name, value);
+          });
+        }
+        syslog(LOG_INFO, "  - Registered Property: %s (access: %s)",
+               prop_name.c_str(), access.c_str());
       }
     }
-
-    this->finishRegistration();
   } catch (const std::exception &e) {
     syslog(LOG_ERR, "An unhandled exception occurred: '%s'", e.what());
     return false;
@@ -78,6 +105,18 @@ void Daemon::SyncAllAccounts() {
   this->emitSignal("SyncCompleted")
       .onInterface("org.task_manager.Daemon")
       .withArguments(success);
+}
+
+sdbus::Variant Daemon::getProperty(const std::string &propertyName) {
+  if (propertyName == "Version") {
+    return sdbus::Variant("1.0.0");
+  }
+  return sdbus::Variant("");
+}
+
+void Daemon::setProperty(const std::string &propertyName,
+                         const sdbus::Variant &value) {
+  syslog(LOG_INFO, "Attempted to set property '%s'", propertyName.c_str());
 }
 
 } // namespace task_manager

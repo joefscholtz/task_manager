@@ -44,6 +44,9 @@ private:
   std::string GetEventsForMonth(const int32_t &year, const int32_t &month);
   void SyncAllAccounts();
 
+  sdbus::Variant getProperty(const std::string &propertyName);
+  void setProperty(const std::string &propertyName,
+                   const sdbus::Variant &value);
   bool init_dbus();
 
   task_manager::Calendar _calendar;
