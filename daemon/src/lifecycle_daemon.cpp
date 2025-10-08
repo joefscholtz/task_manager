@@ -6,11 +6,6 @@ LifecycleDaemon *LifecycleDaemon::s_instance = nullptr;
 LifecycleDaemon::LifecycleDaemon() {
   s_instance = this;
 
-  DbusConfig config = parse_dbus_config();
-  this->_dbus_connection =
-      sdbus::createSessionBusConnection(config.service_name);
-  this->_daemon = std::make_unique<Daemon>(*(this->_dbus_connection), config);
-
   openlog("task_manager_daemon", LOG_PID, LOG_DAEMON);
   this->create_pid_file();
 
@@ -24,6 +19,16 @@ LifecycleDaemon::LifecycleDaemon() {
       s_instance->remove_pid_file();
     }
   });
+  syslog(LOG_INFO, "Daemon starting up...");
+  try {
+    const char *service_name = "org.task_manager.Daemon";
+    const char *object_path = "/org/task_manager/Daemon";
+    this->_dbus_connection = sdbus::createSessionBusConnection(service_name);
+    this->_daemon =
+        std::make_unique<Daemon>(*(this->_dbus_connection), object_path);
+  } catch (const std::exception &e) {
+    syslog(LOG_ERR, "A fatal exception occurred: %s", e.what());
+  }
 }
 
 LifecycleDaemon::~LifecycleDaemon() {
@@ -36,7 +41,7 @@ void LifecycleDaemon::handle_signal(int signal) {
     syslog(LOG_INFO, "Shutdown signal received. Cleaning up...");
     this->_daemon->set_state(Daemon::STATE::SHUTTING_DOWN);
     this->_daemon->_shutdown_requested = true;
-    this->_daemon->remove_pid_file();
+    this->remove_pid_file();
   }
 }
 
@@ -50,21 +55,21 @@ void LifecycleDaemon::run() {
     case Daemon::State::STARTING:
       syslog(LOG_INFO, "Daemon::State: STARTING -> CONFIGURING");
       // Minimal setup before configuration
-      this->_daemon->populate_dbus_callbacks();
       this->_daemon._state = Daemon::State::CONFIGURING;
       break;
 
     case Daemon::State::CONFIGURING:
       syslog(LOG_INFO, "Daemon::State: CONFIGURING -> ACTIVE");
       // Load settings, initialize Calendar, connect to DB
-      this->_daemon->init_dbus();
       this->_daemon._state = Daemon::State::ACTIVE;
       break;
 
     case Daemon::State::ACTIVE:
       // This is the main operational state.
       // It will block here until a request comes in or the loop is interrupted.
-      this->_daemon._dbus_connection->processRequests();
+      if (!this->_shutdown_requested) {
+        this->_dbus_connection->enterEventLoop();
+      }
       break;
 
     case Daemon::State::SHUTTING_DOWN:
@@ -135,48 +140,4 @@ void LifecycleDaemon::remove_pid_file() {
                         "manually or it was already removed.");
   }
 }
-
-static DbusConfig
-LifecycleDaemon::parse_dbus_config(const std::string &xml_file_path) {
-  pugi::xml_document dbus_interface_xml;
-  pugi::xml_node interface_node;
-  std::string service_name;
-  std::string object_path;
-  try {
-    if (!dbus_interface_xml.load_file(xml_file_path.c_str())) {
-      syslog(LOG_ERR,
-             "D-Bus: Failed to load or parse interface XML file at %s.",
-             xml_file_path.c_str());
-      throw std::runtime_error(
-          "D-Bus: Failed to load or parse interface XML file at %s.");
-    }
-    interface_node = dbus_interface_xml.child("node").child("interface");
-    if (!interface_node) {
-      syslog(LOG_ERR, "D-Bus: Could not find <interface> node in XML.");
-      throw std::runtime_error(
-          "D-Bus: Could not find <interface> node in XML.");
-    }
-
-    service_name = interface_node.attribute("name").value();
-    if (service_name.empty()) {
-      syslog(LOG_ERR,
-             "D-Bus: <interface> tag is missing a 'name' attribute in XML.");
-      throw std::runtime_error(
-          "D-Bus: <interface> tag is missing a 'name' attribute in XML.");
-    }
-
-    // The objectPath is derived by replacing '.' with '/' and prepending '/'.
-    // e.g., "org.task_manager.Daemon" -> "/org/task_manager/Daemon"
-    object_path =
-        "/" + std::regex_replace(service_name, std::regex("\\."), "/");
-  } catch (const std::exception &e) {
-    syslog(LOG_ERR, "An unhandled exception occurred: '%s'", e.what());
-    return {};
-  } catch (...) {
-    syslog(LOG_ERR, "An unhandled exception occurred");
-    return {};
-  }
-  return {xml_file_path, interface_node, service_name, object_path};
-}
-
 } // namespace task_manager
